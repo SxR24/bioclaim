@@ -28,11 +28,14 @@ class Problem:
     actual: Optional[str]
 
     def __str__(self):
-        extra = ""
         if self.claimed and self.actual:
             extra = f'  (said "{self.claimed}", actually "{self.actual}")'
         elif self.actual:
             extra = f'  (actually "{self.actual}")'
+        elif self.claimed:
+            extra = f'  (labeled "{self.claimed}")'
+        else:
+            extra = ""
         return f"{self.curie}: {self.kind}{extra}"
 
 

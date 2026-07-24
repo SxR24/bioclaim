@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+- Cleaner obsolete-term output: no longer shows the placeholder short-form (e.g.
+  "GO_0007050") as the "real" name; reads `obsolete / deprecated (labeled "...")`.
+- Surfaced by an expert paragraph where GO:0007050 ("cell cycle arrest", now
+  deprecated in the Gene Ontology) was correctly flagged as obsolete.
+
 ## 0.7.1
 - Cleaner label extraction on dense prose: a "term (CURIE)" mention now reports the
   trailing term (e.g. "nucleoplasm") instead of over-capturing the whole clause.

@@ -247,6 +247,10 @@ def check_claims(text, online=True, entity_hint=None):
                 if ent:
                     canonical = ent.get("primary")
                     if ent.get("obsolete"):
+                        # obsolete terms often have only a placeholder label
+                        # (e.g. "GO_0007050") - don't show it as the "real" name
+                        if canonical and _is_placeholder(canonical, curie):
+                            canonical = None
                         status = "SUPPORTED_OBSOLETE"
                     else:
                         names = _real_names(ent.get("names", []), curie)
