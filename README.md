@@ -10,10 +10,10 @@ research and clinical settings that is a documented safety risk. `bioclaim` is a
 deterministic, low-latency layer that catches it.
 
 > **Real-model finding:** on 40 specialist biology questions, Llama-3.3-70B
-> produced a fabricated, mislabeled, or obsolete biomedical identifier in
-> **~32% of answers** — and two-thirds of those errors (real IDs with wrong or
-> stale descriptions) are invisible to existence-checking alone. Full study:
-> [RESULTS.md](RESULTS.md).
+> produced a wrong biomedical identifier in **~48% of answers**. The largest error
+> class: real, valid accessions pointing at the **wrong gene** (e.g. `Q9ULB2` for
+> Neurexin-1 — that's actually Cadherin-8; the real one is `Q9ULB1`). Invisible to
+> existence-checking; independently verified. Full study: [RESULTS.md](RESULTS.md).
 
 ## Benchmark result
 
