@@ -172,6 +172,26 @@ def verify_entity(curie, kind, arg, hint):
     return ("SUPPORTED_ENTITY_OK" if hit else "SUPPORTED_ENTITY_MISMATCH"), canonical
 
 
+_PHRASE_FILLER = {
+    "the", "a", "an", "of", "via", "to", "into", "onto", "on", "at", "in", "for",
+    "and", "or", "by", "with", "within", "which", "that", "its", "their", "this",
+    "following", "upon", "as", "from", "these", "both", "then",
+}
+
+
+def _tighten_label(phrase):
+    """Reduce an over-captured clause to the trailing term.
+
+    "which rapidly colocalize within the nucleoplasm" -> "nucleoplasm"
+    "DNA damage stimulus"                              -> "DNA damage stimulus"
+    """
+    words = [w for w in re.split(r"\s+", phrase.strip()) if w]
+    words = words[-3:]                       # a GO/term label is short
+    while words and words[0].lower() in _PHRASE_FILLER:
+        words.pop(0)
+    return " ".join(words).strip(" ,;:-") or None
+
+
 def extract_labeled_ids(text):
     """Yield (prefix, curie, claimed_label, start, end).
 
@@ -186,10 +206,11 @@ def extract_labeled_ids(text):
         if m:
             claimed = m.group(1).strip()
         else:
-            before = text[max(0, start - 90):start]
-            m2 = re.search(r"([A-Za-z][A-Za-z0-9 ,'/-]{2,68})\s*\(\s*$", before)
+            before = text[max(0, start - 70):start]
+            # no comma/semicolon in the class -> stop at the nearest clause boundary
+            m2 = re.search(r"([A-Za-z][A-Za-z0-9 /-]{2,55})\(\s*$", before)
             if m2:
-                claimed = m2.group(1).strip()
+                claimed = _tighten_label(m2.group(1))
         yield prefix, curie, claimed, start, end
 
 

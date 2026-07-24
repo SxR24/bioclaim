@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+- Cleaner label extraction on dense prose: a "term (CURIE)" mention now reports the
+  trailing term (e.g. "nucleoplasm") instead of over-capturing the whole clause.
+  Surfaced by a real expert paragraph where the tool correctly flagged GO:0005634
+  ("nucleus") used for "nucleoplasm", but displayed the claim messily.
+
 ## 0.7.0 - "Deployable & reliable"
 - **Persistent on-disk cache** for every database lookup: after a warm-up, bioclaim
   runs fast, offline-capable, and immune to rate limits (each id fetched at most
