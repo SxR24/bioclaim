@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.4
+- Detect **deleted / demerged UniProt accessions**. These return HTTP 200 with
+  `entryType: "Inactive"`, so they previously passed as "exists"; now treated as
+  not-found, since they no longer resolve to a protein. Surfaced by seeded
+  accessions (`J8XYZ9`, `U7FD21`) that turned out to be real-but-deleted.
+
 ## 0.7.3
 - **Full UniProtKB accession coverage.** The extractor previously matched only the
   O/P/Q accession form and silently ignored the second official form (starting

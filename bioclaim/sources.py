@@ -76,9 +76,19 @@ def check_ols(curie, slug, timeout=10):
 
 
 def check_uniprot(acc, timeout=10):
-    """UniProtKB REST: 200 exists, 404/400 not found."""
-    code, _ = _http(f"https://rest.uniprot.org/uniprotkb/{acc}.json", timeout)
+    """UniProtKB REST: 200 exists, 404/400 not found.
+
+    A deleted/demerged accession returns 200 with entryType "Inactive" - treat
+    that as not-found, since it no longer resolves to a protein.
+    """
+    code, body = _http(f"https://rest.uniprot.org/uniprotkb/{acc}.json", timeout)
     if code == 200:
+        if body:
+            try:
+                if json.loads(body.decode()).get("entryType", "").lower().startswith("inactive"):
+                    return False        # deleted / demerged accession
+            except Exception:
+                pass
         return True
     if code in (400, 404):
         return False
