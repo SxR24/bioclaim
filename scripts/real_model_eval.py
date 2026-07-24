@@ -33,9 +33,11 @@ import argparse
 import pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-from bioclaim import scan
+from bioclaim import check_claims
 
-FLAGGED = {"NOT_FOUND", "INVALID_FORMAT"}
+FABRICATED = {"NOT_FOUND", "INVALID_FORMAT"}   # invented identifiers
+MISLABELED = {"SUPPORTED_LABEL_MISMATCH"}       # real id, wrong description
+FLAGGED = FABRICATED | MISLABELED
 
 SYSTEM_PROMPT = (
     "You are a biomedical research assistant. Answer each question concisely and "
@@ -108,8 +110,8 @@ def main():
     print(f"Querying {args.provider}:{args.model} on {len(questions)} questions...\n")
 
     rows = []
-    answers_with_fabrication = 0
-    total_ids = fabricated_ids = unverified_ids = 0
+    answers_flagged = 0
+    total_ids = fabricated_ids = mislabeled_ids = unverified_ids = 0
 
     for i, q in enumerate(questions, 1):
         try:
@@ -118,44 +120,54 @@ def main():
             print(f"  [{i}] API error: {e}")
             continue
 
-        verdicts = scan(answer, online=True)
-        flagged = [v for v in verdicts if v.status in FLAGGED]
+        verdicts = check_claims(answer, online=True)
+        fab = [v for v in verdicts if v.status in FABRICATED]
+        mis = [v for v in verdicts if v.status in MISLABELED]
         total_ids += len(verdicts)
-        fabricated_ids += len(flagged)
+        fabricated_ids += len(fab)
+        mislabeled_ids += len(mis)
         unverified_ids += sum(1 for v in verdicts if v.status == "UNVERIFIED")
-        if flagged:
-            answers_with_fabrication += 1
+        if fab or mis:
+            answers_flagged += 1
 
-        tag = f"FABRICATED x{len(flagged)}" if flagged else "clean"
-        print(f"  [{i:>2}/{len(questions)}] {tag:<14} {q[:52]}")
+        parts = []
+        if fab:
+            parts.append(f"FABRICATED x{len(fab)}")
+        if mis:
+            parts.append(f"MISLABELED x{len(mis)}")
+        tag = " + ".join(parts) if parts else "clean"
+        print(f"  [{i:>2}/{len(questions)}] {tag:<26} {q[:44]}")
 
         for v in verdicts:
             rows.append({
                 "q_num": i, "model": args.model, "question": q,
                 "curie": v.curie, "prefix": v.prefix, "status": v.status,
+                "claimed_label": v.claimed_label or "",
+                "real_label": v.canonical_label or "",
                 "answer_excerpt": answer.replace("\n", " ")[:300],
             })
         time.sleep(0.3)  # be polite to the API
 
     n = len(questions)
+    fields = ["q_num", "model", "question", "curie", "prefix", "status",
+              "claimed_label", "real_label", "answer_excerpt"]
     with open(args.out, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()) if rows else
-                           ["q_num", "model", "question", "curie", "prefix",
-                            "status", "answer_excerpt"])
+        w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(rows)
 
-    pct = answers_with_fabrication / n * 100 if n else 0
+    pct = answers_flagged / n * 100 if n else 0
     print("\n" + "=" * 60)
     print(f"  {args.model}  -  {n} biology questions")
     print("=" * 60)
-    print(f"  answers with >=1 fabricated identifier: {answers_with_fabrication}/{n} ({pct:.0f}%)")
-    print(f"  identifiers examined:                   {total_ids}")
-    print(f"  fabricated (not in source database):    {fabricated_ids}")
-    print(f"  unverifiable (network):                 {unverified_ids}")
+    print(f"  answers with >=1 hallucinated identifier: {answers_flagged}/{n} ({pct:.0f}%)")
+    print(f"  identifiers examined:                     {total_ids}")
+    print(f"  fabricated (id does not exist):           {fabricated_ids}")
+    print(f"  mislabeled (real id, wrong description):  {mislabeled_ids}")
+    print(f"  unverifiable (network):                   {unverified_ids}")
     print("=" * 60)
-    print(f'\nHEADLINE: {args.model} fabricated a biomedical identifier in '
-          f'{pct:.0f}% of answers ({answers_with_fabrication}/{n}).')
+    print(f'\nHEADLINE: {args.model} produced a fabricated or mislabeled '
+          f'biomedical identifier in {pct:.0f}% of answers ({answers_flagged}/{n}).')
     print(f"Evidence saved to {args.out}")
 
 
