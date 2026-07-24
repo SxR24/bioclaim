@@ -48,6 +48,30 @@ SYSTEM_PROMPT = (
 )
 
 
+def _ask_with_retry(ask, model, question, retries=4):
+    """Call the model, retrying rate-limit (429) errors with backoff.
+
+    Honors the server's suggested 'retry in Ns' when present. Returns the answer
+    text, or None if it still fails (e.g. a daily quota that a wait can't clear).
+    """
+    import re
+    for attempt in range(retries + 1):
+        try:
+            return ask(model, question)
+        except Exception as e:
+            msg = str(e)
+            rate_limited = "429" in msg or "RESOURCE_EXHAUSTED" in msg or "rate" in msg.lower()
+            if not rate_limited or attempt == retries:
+                if not rate_limited:
+                    print(f"      API error: {msg[:120]}")
+                return None
+            m = re.search(r"retry in ([0-9.]+)s", msg) or re.search(r"'?retryDelay'?[:=]\s*'?([0-9]+)s", msg)
+            wait = min(float(m.group(1)) if m else 2 * (2 ** attempt), 60) + 1
+            print(f"      rate-limited, waiting {wait:.0f}s (attempt {attempt + 1}/{retries})...")
+            time.sleep(wait)
+    return None
+
+
 def load_questions(path, n=None):
     with open(path, encoding="utf-8") as f:
         qs = [line.strip() for line in f if line.strip()]
@@ -99,6 +123,10 @@ def main():
     ap.add_argument("--n", type=int, default=None, help="number of questions (default: all)")
     ap.add_argument("--questions", default="data/bio_questions.txt")
     ap.add_argument("--out", default="real_model_report.csv")
+    ap.add_argument("--delay", type=float, default=0.3,
+                    help="seconds between calls (raise for tight rate limits, e.g. 13 for Gemini free)")
+    ap.add_argument("--retries", type=int, default=4,
+                    help="retries with backoff on rate-limit (429) errors")
     args = ap.parse_args()
 
     if args.provider == "anthropic":
@@ -115,16 +143,16 @@ def main():
     print(f"Querying {args.provider}:{args.model} on {len(questions)} questions...\n")
 
     rows = []
-    answers_flagged = 0
+    answered = answers_flagged = 0
     total_ids = fabricated_ids = mislabeled_ids = 0
     wrong_entity_ids = obsolete_ids = unverified_ids = 0
 
     for i, q in enumerate(questions, 1):
-        try:
-            answer = ask(args.model, q)
-        except Exception as e:
-            print(f"  [{i}] API error: {e}")
+        answer = _ask_with_retry(ask, args.model, q, args.retries)
+        if answer is None:
+            print(f"  [{i:>2}/{len(questions)}] SKIPPED (rate-limited / API error)")
             continue
+        answered += 1
 
         verdicts = check_claims(answer, online=True)
         fab = [v for v in verdicts if v.status in FABRICATED]
@@ -160,9 +188,10 @@ def main():
                 "real_label": v.canonical_label or "",
                 "answer_excerpt": answer.replace("\n", " ")[:300],
             })
-        time.sleep(0.3)  # be polite to the API
+        time.sleep(args.delay)  # be polite to the API
 
     n = len(questions)
+    skipped = n - answered
     fields = ["q_num", "model", "question", "curie", "prefix", "status",
               "claimed_label", "real_label", "answer_excerpt"]
     with open(args.out, "w", newline="", encoding="utf-8") as f:
@@ -170,11 +199,15 @@ def main():
         w.writeheader()
         w.writerows(rows)
 
-    pct = answers_flagged / n * 100 if n else 0
+    # rate is over ANSWERED questions, never the full set - a partial run
+    # (rate-limited) must not silently divide by 40.
+    denom = answered or 1
+    pct = answers_flagged / denom * 100
     print("\n" + "=" * 60)
-    print(f"  {args.model}  -  {n} biology questions")
+    print(f"  {args.model}  -  {answered}/{n} questions answered"
+          + (f"  ({skipped} SKIPPED - rate-limited)" if skipped else ""))
     print("=" * 60)
-    print(f"  answers with >=1 hallucinated identifier: {answers_flagged}/{n} ({pct:.0f}%)")
+    print(f"  answers with >=1 hallucinated identifier: {answers_flagged}/{answered} ({pct:.0f}%)")
     print(f"  identifiers examined:                     {total_ids}")
     print(f"  fabricated (id does not exist):           {fabricated_ids}")
     print(f"  mislabeled (real id, wrong description):  {mislabeled_ids}")
@@ -182,8 +215,11 @@ def main():
     print(f"  obsolete (real id, deprecated):           {obsolete_ids}")
     print(f"  unverifiable (network):                   {unverified_ids}")
     print("=" * 60)
-    print(f'\nHEADLINE: {args.model} produced a fabricated or mislabeled '
-          f'biomedical identifier in {pct:.0f}% of answers ({answers_flagged}/{n}).')
+    if skipped:
+        print(f"\nWARNING: {skipped} questions were skipped (rate limit). This is a "
+              f"PARTIAL run - not comparable to a full 40-question run.")
+    print(f'\nHEADLINE: {args.model} produced a fabricated, mislabeled, misassigned '
+          f'or obsolete identifier in {pct:.0f}% of {answered} answered questions.')
     print(f"Evidence saved to {args.out}")
 
 
