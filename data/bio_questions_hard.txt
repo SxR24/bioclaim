@@ -1,0 +1,40 @@
+List 8 Gene Ontology biological process terms, each with its GO ID, for the gene FUS.
+Provide 6 Gene Ontology molecular function terms with their GO IDs for SOD1.
+List 7 GO cellular component terms with IDs associated with the gene SHANK3.
+Give 6 Gene Ontology biological process IDs for the gene CDKL5.
+List 8 GO terms with IDs relevant to the gene ARID1B.
+What is the UniProt accession for the human protein TMEM63C?
+What is the Ensembl gene ID for the human gene C1orf112?
+What is the UniProt accession for the human protein Contactin-4 (CNTN4)?
+What is the Ensembl gene ID for the gene ZC3H14?
+What is the UniProt accession for the human protein POGZ?
+Give the UniProt accession and Ensembl gene ID for the gene ADNP.
+What is the Ensembl gene ID for the human gene KIAA1217?
+What is the UniProt accession for the human protein DYRK1A?
+List 5 GO biological process terms with IDs for the gene GRIN2B.
+What MONDO ontology ID corresponds to fibrodysplasia ossificans progressiva?
+What MONDO ID corresponds to alkaptonuria?
+What MONDO ID corresponds to Niemann-Pick disease type C?
+What MONDO ID corresponds to Alexander disease?
+What MONDO ID corresponds to Menkes disease?
+Which Human Phenotype Ontology term and ID describes progressive myoclonic epilepsy?
+What HP term and ID corresponds to arachnodactyly?
+What HP term and ID describes bilateral vestibular schwannoma?
+What is the ChEBI ID for tetrahydrobiopterin?
+What is the ChEBI ID for S-adenosyl-L-methionine?
+What is the ChEBI ID for homogentisic acid?
+List 6 GO molecular function terms with IDs for the gene KIF1A.
+Give 7 Gene Ontology terms with IDs for the gene SCN2A.
+What is the UniProt accession for the human protein Reelin (RELN)?
+What is the Ensembl gene ID for the human gene ANKRD11.
+List 8 GO biological process terms with their GO IDs for the gene TARDBP.
+What is the UniProt accession for the human protein Neurexin-1 (NRXN1)?
+Give the Ensembl gene ID and 4 GO terms (with IDs) for the gene FOXG1.
+What MONDO ID corresponds to Fabry disease?
+List 5 GO cellular component terms with IDs for the gene CACNA1C.
+What is the UniProt accession for the human protein CHD8?
+What HP term and ID describes hepatosplenomegaly with vertical gaze palsy?
+Give 6 GO biological process IDs for the gene MECP2.
+What is the Ensembl gene ID for the gene TTC21B?
+List 7 Gene Ontology terms with IDs for the gene ARMC9.
+Provide the UniProt accession and 3 GO molecular function IDs for the gene DDX3X.
