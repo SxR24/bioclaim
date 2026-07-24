@@ -23,8 +23,8 @@ dependencies = []  # standard library only
 dev = ["pytest>=7"]
 
 [project.urls]
-Homepage = "https://github.com/your-username/bioclaim"
-Issues = "https://github.com/your-username/bioclaim/issues"
+Homepage = "https://github.com/SxR24/bioclaim"
+Issues = "https://github.com/SxR24/bioclaim/issues"
 
 [tool.setuptools]
 packages = ["bioclaim"]

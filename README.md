@@ -43,7 +43,7 @@ Supported identifier types: GO, HP, MONDO, DOID, CHEBI, Ensembl gene (ENSG), Uni
 ## Install & use
 
 ```bash
-git clone https://github.com/your-username/bioclaim.git
+git clone https://github.com/SxR24/bioclaim.git
 cd bioclaim
 pip install -e .          # optional; scripts also run without installing
 ```
