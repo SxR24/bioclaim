@@ -28,6 +28,7 @@ Output: a headline stat, plus real_model_report.csv with the evidence
 import os
 import sys
 import csv
+import json
 import time
 import argparse
 import pathlib
@@ -198,6 +199,14 @@ def main():
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(rows)
+
+    # sidecar so downstream tools know the true denominator (answered != n)
+    json.dump({"model": args.model, "n": n, "answered": answered,
+               "skipped": skipped, "answers_flagged": answers_flagged,
+               "total_ids": total_ids, "fabricated": fabricated_ids,
+               "mislabeled": mislabeled_ids, "wrong_entity": wrong_entity_ids,
+               "obsolete": obsolete_ids},
+              open(args.out + ".meta.json", "w"))
 
     # rate is over ANSWERED questions, never the full set - a partial run
     # (rate-limited) must not silently divide by 40.

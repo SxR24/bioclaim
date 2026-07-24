@@ -8,8 +8,8 @@ Usage (from repo root):
     python scripts/compare.py real_model_report.csv gemini_report.csv deepseek_v4pro_report.csv
     python scripts/compare.py *.csv --questions data/bio_questions_hard.txt
 """
-import sys
 import csv
+import json
 import argparse
 import pathlib
 
@@ -25,12 +25,21 @@ def summarize(path, n_questions=None):
     if not rows:
         return None
     model = rows[0].get("model", pathlib.Path(path).stem)
-    n = n_questions or max(int(r["q_num"]) for r in rows)
-    flagged_q = {r["q_num"] for r in rows if r["status"] in FLAGGED}
     cat = lambda s: sum(1 for r in rows if r["status"] in s)
+
+    # prefer the run's sidecar for the true answered-count (partial runs!)
+    meta_path = pathlib.Path(str(path) + ".meta.json")
+    if meta_path.exists():
+        m = json.load(open(meta_path))
+        answered, skipped = m["answered"], m.get("skipped", 0)
+    else:
+        answered = len({r["q_num"] for r in rows})   # lower bound
+        skipped = (n_questions - answered) if n_questions else 0
+
+    flagged_q = {r["q_num"] for r in rows if r["status"] in FLAGGED}
     return {
-        "model": model, "n": n, "total_ids": len(rows),
-        "answers_flagged": len(flagged_q),
+        "model": model, "answered": answered, "partial": skipped > 0,
+        "total_ids": len(rows), "answers_flagged": len(flagged_q),
         "fab": cat(FABRICATED), "mis": cat(MISLABELED),
         "ent": cat(WRONG_ENTITY), "obs": cat(OBSOLETE),
     }
@@ -48,17 +57,21 @@ def main():
         n_q = sum(1 for l in open(args.questions, encoding="utf-8") if l.strip())
 
     summ = [s for s in (summarize(p, n_q) for p in args.reports) if s]
-    summ.sort(key=lambda s: s["answers_flagged"] / s["n"], reverse=True)
+    summ.sort(key=lambda s: s["answers_flagged"] / max(s["answered"], 1), reverse=True)
 
-    hdr = f"{'Model':<34}{'Answers wrong':>16}{'Fab':>6}{'Mis':>6}{'Ent':>6}{'Obs':>6}{'IDs':>6}"
+    hdr = f"{'Model':<30}{'Answers wrong':>18}{'Fab':>6}{'Mis':>6}{'Ent':>6}{'Obs':>6}{'IDs':>6}"
     print(hdr)
     print("-" * len(hdr))
     for s in summ:
-        pct = s["answers_flagged"] / s["n"] * 100
-        rate = f"{s['answers_flagged']}/{s['n']} ({pct:.0f}%)"
-        print(f"{s['model'][:33]:<34}{rate:>16}{s['fab']:>6}{s['mis']:>6}"
-              f"{s['ent']:>6}{s['obs']:>6}{s['total_ids']:>6}")
+        a = max(s["answered"], 1)
+        pct = s["answers_flagged"] / a * 100
+        flag = " *PARTIAL" if s["partial"] else ""
+        rate = f"{s['answers_flagged']}/{s['answered']} ({pct:.0f}%)"
+        print(f"{s['model'][:29]:<30}{rate:>18}{s['fab']:>6}{s['mis']:>6}"
+              f"{s['ent']:>6}{s['obs']:>6}{s['total_ids']:>6}{flag}")
     print("\nFab=fabricated  Mis=mislabeled  Ent=wrong-entity  Obs=obsolete")
+    if any(s["partial"] for s in summ):
+        print("* PARTIAL run (rate-limited) - not directly comparable to full runs.")
 
 
 if __name__ == "__main__":
