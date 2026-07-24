@@ -61,7 +61,10 @@ def _ask_with_retry(ask, model, question, retries=4):
             return ask(model, question)
         except Exception as e:
             msg = str(e)
-            rate_limited = "429" in msg or "RESOURCE_EXHAUSTED" in msg or "rate" in msg.lower()
+            low = msg.lower()
+            rate_limited = any(s in low for s in (
+                "429", "503", "rate limit", "resource_exhausted", "resourceexhausted",
+                "exhausted", "limit reached", "overloaded", "too many requests"))
             if not rate_limited or attempt == retries:
                 if not rate_limited:
                     print(f"      API error: {msg[:120]}")
@@ -148,7 +151,8 @@ def main():
     total_ids = fabricated_ids = mislabeled_ids = 0
     wrong_entity_ids = obsolete_ids = unverified_ids = 0
 
-    for i, q in enumerate(questions, 1):
+    try:
+      for i, q in enumerate(questions, 1):
         answer = _ask_with_retry(ask, args.model, q, args.retries)
         if answer is None:
             print(f"  [{i:>2}/{len(questions)}] SKIPPED (rate-limited / API error)")
@@ -190,6 +194,8 @@ def main():
                 "answer_excerpt": answer.replace("\n", " ")[:300],
             })
         time.sleep(args.delay)  # be polite to the API
+    except KeyboardInterrupt:
+        print("\n[interrupted] saving partial results collected so far...")
 
     n = len(questions)
     skipped = n - answered
