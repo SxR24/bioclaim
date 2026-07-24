@@ -1,0 +1,40 @@
+What is the UniProt accession number for the human protein TP53?
+What is the Ensembl gene ID for the human gene BRCA1?
+List three Gene Ontology biological process terms, with their GO IDs, for the gene EGFR.
+Which Human Phenotype Ontology (HP) term and ID corresponds to microcephaly?
+What is the ChEBI ID for dopamine?
+What MONDO disease ontology ID corresponds to cystic fibrosis?
+What is the UniProt accession for the human protein hemoglobin subunit beta?
+Give the Ensembl gene ID and three GO molecular function terms (with IDs) for KRAS.
+Which GO cellular component term and ID describes the mitochondrial inner membrane?
+What is the Human Phenotype Ontology ID for seizures?
+What is the UniProt accession for the human dopamine receptor D2?
+List the GO biological process IDs associated with autophagy.
+What is the Ensembl gene ID for the human gene PTEN?
+Which MONDO ID corresponds to Huntington disease?
+What is the ChEBI ID for acetylsalicylic acid (aspirin)?
+Give the UniProt accession and the Ensembl gene ID for the protein alpha-synuclein (SNCA).
+What HP term and ID describes intellectual disability?
+List three GO terms with IDs relevant to DNA repair for the gene ATM.
+What is the UniProt accession for the human insulin protein?
+Which GO term and ID corresponds to the process of apoptosis?
+What is the Ensembl gene ID for the human gene MYC?
+What is the ChEBI ID for glucose?
+Give the HP term and ID for sensorineural hearing loss.
+What MONDO ID corresponds to Parkinson disease?
+What is the UniProt accession for the human protein tau (MAPT)?
+List three GO biological process terms with IDs for the gene TNF.
+What is the Ensembl gene ID for the human gene APOE?
+Which HP term and ID describes cardiomegaly?
+What is the ChEBI ID for cholesterol?
+What is the UniProt accession for the human protein CFTR?
+Give three GO molecular function terms with IDs for the gene SOD1.
+What MONDO ID corresponds to type 2 diabetes mellitus?
+What is the Ensembl gene ID for the human gene VEGFA?
+Which GO cellular component term and ID describes the nucleolus?
+What is the UniProt accession for the human protein BRCA2?
+List the GO biological process IDs associated with inflammation for IL6.
+What HP term and ID corresponds to hypertension?
+What is the ChEBI ID for caffeine?
+What is the Ensembl gene ID for the human gene GAPDH?
+Give the UniProt accession and a relevant GO term (with ID) for the protein huntingtin (HTT).
