@@ -36,8 +36,8 @@ python scripts/benchmark.py data/benchmark_large.jsonl
 
 ## How it works
 
-Two layers, both designed to **never falsely accuse** (if a claim can't be verified it is
-marked `UNVERIFIED`, never `NOT_FOUND`):
+Four layers, all designed to **never falsely accuse** (if a claim can't be verified it is
+marked `UNVERIFIED`, never flagged):
 
 1. **FORMAT** — offline, deterministic. Rejects malformed identifiers.
 2. **EXISTS** — live existence check against the source database. Well-formed but absent
@@ -55,63 +55,132 @@ Supported identifier types: GO, HP, MONDO, DOID, CHEBI, Ensembl gene (ENSG), Uni
 Every lookup is **cached to disk** ($BIOCLAIM_CACHE, else `~/.cache/bioclaim/`), so
 after a warm-up bioclaim runs fast, offline-capable, and immune to rate limits.
 
-## Install & use
+## Installation
 
 ```bash
-pip install -e .           # from a clone; PyPI release: pip install bioclaim
+pip install bioclaim
 ```
 
-**One-call API:**
+Pure Python standard library — no dependencies. This installs both the `bioclaim`
+command and the importable package.
+
+## Usage
+
+The mental model never changes: **you hand bioclaim some text — an LLM's answer, a
+paragraph, a document — and it tells you which biomedical identifiers in it are
+fabricated, mislabeled, misassigned, or deprecated.** It does not call any model; it
+screens whatever text you give it.
+
+### Command line
+
+```bash
+# check text directly (whatever is in the quotes gets checked)
+bioclaim "TP53 is P04637 and the fabricated GO:9999999"
+
+# pipe a model's output or a file in (best for long/messy text)
+echo "some model output" | bioclaim
+bioclaim < answer.txt
+
+# tell it the gene the text is about, to also catch wrong-gene IDs
+bioclaim --entity BRCA1 "the accession is P04637"    # P04637 is TP53 -> flagged
+
+# offline: format check only, no network
+bioclaim --offline "GO:0006915"
+
+bioclaim --version
+```
+
+Exit code is `0` when clean and `1` when anything is flagged, so it fits scripts and CI:
+
+```bash
+bioclaim "$answer" && echo "safe to use" || echo "flagged!"
+```
+
+### Python — one call
 
 ```python
 from bioclaim import check
 
 result = check("TP53 (P04637) is annotated with GO:9999999 (apoptosis).")
-print(result.ok)           # False
+result.ok            # False   (True if nothing is flagged)
+result.n_ids         # 3       (identifiers examined)
 for p in result.problems:
-    print(p)               # GO:9999999: fabricated (does not exist)
+    print(p)         # GO:9999999: fabricated (does not exist)
+
+check(answer, entity_hint="BRCA1")   # pass the intended gene -> wrong-gene check
+check(answer, online=False)          # offline, format check only
 ```
 
-**Guard any model call** (raises if a fabrication slips through):
+### Python — guard a model call (the firewall)
 
 ```python
 from bioclaim import Firewall
+
+# non-raising: inspect the result yourself
+result = Firewall()(model_answer)
+
+# raising: stop the pipeline if a fabrication slips through
 guarded = Firewall(raise_on_flag=True).guard(call_my_llm)
-answer = guarded(prompt)   # BioclaimFlag raised if the answer cites a fake ID
+answer = guarded(prompt)             # raises BioclaimFlag on a flagged identifier
 ```
 
-**Command line:**
+### What the verdicts mean
+
+| Verdict | Meaning |
+| --- | --- |
+| *(clean)* | identifier exists and is consistent with its context |
+| **fabricated** | does not exist in any database (incl. deleted/inactive accessions) |
+| **wrong description** | real id, wrong label — e.g. `GO:0005634` ("nucleus") called "nucleoplasm" |
+| **wrong gene/entity** | real accession, but for a different gene (needs `--entity` / `entity_hint`) |
+| **obsolete / deprecated** | real id, but retired from the database |
+| **unverifiable** | could not reach the database — never counted as a problem |
+
+Supported identifier types: GO, HP, MONDO, DOID, ChEBI, Ensembl gene (ENSG), and
+UniProtKB (both official accession forms, with deleted/inactive detection).
+
+### Try it on realistic text
+
+The repo ships expert-style passages that mix real, fabricated, deprecated, and
+misassigned identifiers, with an answer key:
 
 ```bash
-bioclaim "TP53 is P04637 and the fake GO:9999999"
-echo "some model output" | bioclaim --entity BRCA1
+bioclaim < examples/sample_paragraphs.txt
 ```
 
-## Project layout
+### Caching
 
-```
-bioclaim/              core package (patterns, live sources, validator)
-scripts/               runnable CLIs: demo, batch, benchmark, generate_benchmark
-data/                  sample_answers.jsonl (labeled demo set)
-tests/                 offline unit tests
-```
+Every database lookup is cached to disk (`$BIOCLAIM_CACHE`, else `~/.cache/bioclaim/`).
+After a warm-up bioclaim is fast, works offline, and is immune to rate limits — each
+identifier is fetched at most once. Set `BIOCLAIM_CACHE=off` to disable.
 
-Run the pieces (from the repo root):
+## For developers / research
 
 ```bash
-python scripts/demo.py                     # catch fakes in one example answer
-python scripts/benchmark.py                # precision/recall on the sample set
-python scripts/batch.py your_answers.jsonl # scan your own AI answers
-python -m pytest                           # run tests
+git clone https://github.com/SxR24/bioclaim.git
+cd bioclaim && pip install -e .
+python -m pytest
+
+# measure a real model's hallucination rate (needs a free Groq key)
+python scripts/real_model_eval.py --provider groq \
+    --model llama-3.3-70b-versatile --questions data/bio_questions_hard.txt --out run.csv
+python scripts/compare.py run.csv              # multi-model comparison table
 ```
 
-## Roadmap (land-and-expand)
+```
+bioclaim/     core package: patterns, live sources (+ cache), validator, claims, api
+scripts/      research tooling: real_model_eval, benchmark, compare, rescore, demos
+examples/     guard_llm.py + sample_paragraphs.txt
+tests/        offline unit tests
+```
 
-- **v0.1–0.3** Identifier validation across ontologies, genes, and proteins *(done)*
-- **v0.4** Local database snapshots — microsecond lookups, fully offline, true 100% recall
-- **v0.5** Claim verification — relationships, not just IDs (gene–disease, gene–function)
-- **v0.6** Calibrated confidence per claim
-- **v1.0** Public leaderboard + LLM-framework integrations
+## Roadmap
+
+- **v0.1–0.4** Identifier validation: format + live existence check, disk-cached *(done)*
+- **v0.5** Claim verification — label consistency (real id, wrong description) *(done)*
+- **v0.6** Entity-correspondence — real id, wrong gene *(done)*
+- **v0.7** Deployable release — persistent cache, one-call API, `Firewall`, CLI, PyPI *(done)*
+- **v0.8** Context-free wrong-gene detection (no `entity_hint` needed) — *next*
+- **later** Calibrated confidence · relationship claims (gene–disease, pathway) · preprint
 
 ## Why this design wins
 
