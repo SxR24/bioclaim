@@ -77,6 +77,63 @@ def _matches(claimed, names):
     return False
 
 
+# --- v0.6: entity-correspondence (is this real ID the RIGHT one for the gene?) ---
+
+_CAND_RE = re.compile(r"\bC\d+orf\d+\b|\b[A-Z][A-Z0-9]{1,7}\b")
+_SYMBOL_STOP = {
+    "DNA", "RNA", "MRNA", "TRNA", "RRNA", "NCRNA", "ATP", "GTP", "ADP", "GDP",
+    "AMP", "NAD", "NADP", "NADH", "FAD", "GO", "HP", "HPO", "ID", "IDS", "THE",
+    "FOR", "IS", "ARE", "AND", "OR", "OF", "IN", "TO", "GENE", "HUMAN", "UNIPROT",
+    "ENSEMBL", "ENSG", "MONDO", "DOID", "CHEBI", "HGNC", "EC", "PDB", "KEGG",
+    "NCBI", "OMIM", "API", "REST", "JSON", "PH", "UV", "PCR", "MW", "KDA",
+}
+
+
+def _looks_like_id(tok):
+    for _rx, (rx, _k, _a, _l) in [(p, ID_PATTERNS[p]) for p in ID_PATTERNS]:
+        if rx.fullmatch(tok):
+            return True
+    return False
+
+
+def _gene_candidates(window):
+    """Symbol-like tokens near an identifier (nearest last), minus noise/IDs."""
+    out = []
+    for m in _CAND_RE.finditer(window):
+        tok = m.group(0)
+        up = tok.upper()
+        if up in _SYMBOL_STOP or _looks_like_id(tok):
+            continue
+        out.append(up)
+    return out
+
+
+def _entity_status(curie, kind, arg, claimed_label, window_before):
+    """For UniProt/Ensembl: does the ID correspond to the claimed gene/entity?"""
+    ent = sources.fetch_entity(kind, curie, arg)
+    if not ent:
+        return "SUPPORTED", None
+    canonical = ent.get("primary")
+    real_syms = {s.upper() for s in ent.get("symbols", [])}
+    real_names = _real_names(ent.get("names", []), curie)
+
+    signals = []                       # collect True/False evidence
+    if claimed_label:                  # e.g. "P04637 (Cellular tumor antigen p53)"
+        signals.append(_matches(claimed_label, real_names))
+    cands = _gene_candidates(window_before)
+    if cands and real_syms:
+        if any(c in real_syms for c in cands):
+            signals.append(True)
+        else:
+            signals.append(False)      # a gene symbol is claimed, none match
+
+    if any(s is True for s in signals):
+        return "SUPPORTED_ENTITY_OK", canonical
+    if any(s is False for s in signals):
+        return "SUPPORTED_ENTITY_MISMATCH", canonical
+    return "SUPPORTED_NO_LABEL", canonical
+
+
 def extract_labeled_ids(text):
     """Yield (prefix, curie, claimed_label, start, end).
 
@@ -109,16 +166,20 @@ def check_claims(text, online=True):
         status = v.status if v else "UNVERIFIED"
         canonical = None
 
-        if status == "SUPPORTED":
-            if not claimed:
+        if status == "SUPPORTED" and online:
+            if kind in ("uniprot", "ensembl"):
+                # v0.6: check the ID belongs to the claimed gene/entity
+                window = text[max(0, start - 80):start]
+                status, canonical = _entity_status(curie, kind, arg,
+                                                   claimed, window)
+            elif not claimed:
                 status = "SUPPORTED_NO_LABEL"
-            elif online:
+            else:
+                # v0.5: ontology term - check its description/label
                 ent = sources.fetch_entity(kind, curie, arg)
                 if ent:
                     canonical = ent.get("primary")
                     if ent.get("obsolete"):
-                        # deprecated identifier: an honest, distinct finding,
-                        # never a label "mismatch" against a stale name.
                         status = "SUPPORTED_OBSOLETE"
                     else:
                         names = _real_names(ent.get("names", []), curie)
@@ -126,7 +187,8 @@ def check_claims(text, online=True):
                         status = ("SUPPORTED_LABEL_OK" if m is True
                                   else "SUPPORTED_LABEL_MISMATCH" if m is False
                                   else "SUPPORTED_NO_LABEL")
-                # ent is None -> leave status SUPPORTED (couldn't fetch name)
+        elif status == "SUPPORTED":
+            status = "SUPPORTED_NO_LABEL"
         out.append(ClaimVerdict(curie, prefix, kind_label, claimed,
                                 canonical, status, start, end))
     return out
@@ -136,7 +198,8 @@ def report_claims(text, online=True):
     verdicts = check_claims(text, online=online)
     flagged = [v for v in verdicts
                if v.status in ("NOT_FOUND", "INVALID_FORMAT",
-                               "SUPPORTED_LABEL_MISMATCH", "SUPPORTED_OBSOLETE")]
+                               "SUPPORTED_LABEL_MISMATCH", "SUPPORTED_OBSOLETE",
+                               "SUPPORTED_ENTITY_MISMATCH")]
     return {
         "n_ids": len(verdicts),
         "n_flagged": len(flagged),

@@ -37,8 +37,9 @@ from bioclaim import check_claims
 
 FABRICATED = {"NOT_FOUND", "INVALID_FORMAT"}   # invented identifiers
 MISLABELED = {"SUPPORTED_LABEL_MISMATCH"}       # real id, wrong description
+WRONG_ENTITY = {"SUPPORTED_ENTITY_MISMATCH"}    # real id, wrong gene/entity
 OBSOLETE = {"SUPPORTED_OBSOLETE"}               # real id, but deprecated/retired
-FLAGGED = FABRICATED | MISLABELED | OBSOLETE
+FLAGGED = FABRICATED | MISLABELED | WRONG_ENTITY | OBSOLETE
 
 SYSTEM_PROMPT = (
     "You are a biomedical research assistant. Answer each question concisely and "
@@ -112,7 +113,8 @@ def main():
 
     rows = []
     answers_flagged = 0
-    total_ids = fabricated_ids = mislabeled_ids = obsolete_ids = unverified_ids = 0
+    total_ids = fabricated_ids = mislabeled_ids = 0
+    wrong_entity_ids = obsolete_ids = unverified_ids = 0
 
     for i, q in enumerate(questions, 1):
         try:
@@ -124,13 +126,15 @@ def main():
         verdicts = check_claims(answer, online=True)
         fab = [v for v in verdicts if v.status in FABRICATED]
         mis = [v for v in verdicts if v.status in MISLABELED]
+        ent = [v for v in verdicts if v.status in WRONG_ENTITY]
         obs = [v for v in verdicts if v.status in OBSOLETE]
         total_ids += len(verdicts)
         fabricated_ids += len(fab)
         mislabeled_ids += len(mis)
+        wrong_entity_ids += len(ent)
         obsolete_ids += len(obs)
         unverified_ids += sum(1 for v in verdicts if v.status == "UNVERIFIED")
-        if fab or mis or obs:
+        if fab or mis or ent or obs:
             answers_flagged += 1
 
         parts = []
@@ -138,10 +142,12 @@ def main():
             parts.append(f"FABRICATED x{len(fab)}")
         if mis:
             parts.append(f"MISLABELED x{len(mis)}")
+        if ent:
+            parts.append(f"WRONG-ENTITY x{len(ent)}")
         if obs:
             parts.append(f"OBSOLETE x{len(obs)}")
         tag = " + ".join(parts) if parts else "clean"
-        print(f"  [{i:>2}/{len(questions)}] {tag:<30} {q[:40]}")
+        print(f"  [{i:>2}/{len(questions)}] {tag:<34} {q[:36]}")
 
         for v in verdicts:
             rows.append({
@@ -169,6 +175,7 @@ def main():
     print(f"  identifiers examined:                     {total_ids}")
     print(f"  fabricated (id does not exist):           {fabricated_ids}")
     print(f"  mislabeled (real id, wrong description):  {mislabeled_ids}")
+    print(f"  wrong-entity (real id, wrong gene):       {wrong_entity_ids}")
     print(f"  obsolete (real id, deprecated):           {obsolete_ids}")
     print(f"  unverifiable (network):                   {unverified_ids}")
     print("=" * 60)

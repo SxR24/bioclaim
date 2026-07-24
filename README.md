@@ -46,6 +46,9 @@ marked `UNVERIFIED`, never `NOT_FOUND`):
 3. **CLAIM (v0.5)** — label consistency. A *real* identifier with a *wrong* description
    (`GO:0006281 (photosynthesis)`, actually "DNA repair") is flagged
    `SUPPORTED_LABEL_MISMATCH`. Synonym-aware, so paraphrases aren't falsely flagged.
+4. **ENTITY (v0.6)** — correspondence. A *real* UniProt/Ensembl ID attached to the
+   *wrong* gene ("the UniProt for TP53 is P38398", actually BRCA1) is flagged
+   `SUPPORTED_ENTITY_MISMATCH` — the hardest class, invisible to existence checks.
 
 Supported identifier types: GO, HP, MONDO, DOID, CHEBI, Ensembl gene (ENSG), UniProtKB.
 

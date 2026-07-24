@@ -36,8 +36,28 @@ def test_end_to_end_with_mocked_db(monkeypatch=None):
     print("all claim tests passed")
 
 
+def test_entity_correspondence(monkeypatch=None):
+    # v0.6: real ID for the WRONG gene must be flagged
+    S.exists = lambda kind, curie, arg, timeout=10: True
+    S.fetch_entity = lambda kind, curie, arg, timeout=10: {
+        "P38398": {"primary": "BRCA1 protein", "names": ["BRCA1"],
+                   "symbols": ["BRCA1"], "obsolete": False},
+        "P04637": {"primary": "Cellular tumor antigen p53",
+                   "names": ["TP53", "P53"], "symbols": ["TP53", "P53"],
+                   "obsolete": False},
+    }.get(curie)
+    ok = {v.curie: v.status
+          for v in claims.check_claims("BRCA1 has UniProt P38398.", online=True)}
+    bad = {v.curie: v.status
+           for v in claims.check_claims("BRCA1 has UniProt P04637.", online=True)}
+    assert ok["P38398"] == "SUPPORTED_ENTITY_OK"
+    assert bad["P04637"] == "SUPPORTED_ENTITY_MISMATCH"
+    print("entity-correspondence test passed")
+
+
 if __name__ == "__main__":
     test_label_parsing()
     test_matching_is_synonym_aware()
     test_end_to_end_with_mocked_db()
+    test_entity_correspondence()
     print("OK")

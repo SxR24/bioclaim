@@ -144,7 +144,7 @@ def _ols_entity(curie, slug, timeout=10):
     for s in t.get("obo_synonym") or []:
         if isinstance(s, dict) and s.get("name"):
             names.append(s["name"])
-    return {"primary": label, "names": names, "obsolete": obsolete}
+    return {"primary": label, "names": names, "symbols": [], "obsolete": obsolete}
 
 
 def _uniprot_entity(acc, timeout=10):
@@ -155,7 +155,7 @@ def _uniprot_entity(acc, timeout=10):
         d = json.loads(body.decode())
     except Exception:
         return None
-    names = []
+    names, symbols = [], []
     pd = d.get("proteinDescription", {})
     rec = pd.get("recommendedName", {}).get("fullName", {}).get("value")
     if rec:
@@ -168,10 +168,12 @@ def _uniprot_entity(acc, timeout=10):
         gn = g.get("geneName", {}).get("value")
         if gn:
             names.append(gn)
+            symbols.append(gn)
         for syn in g.get("synonyms", []) or []:
             if syn.get("value"):
                 names.append(syn["value"])
-    return {"primary": rec, "names": names}
+                symbols.append(syn["value"])
+    return {"primary": rec, "names": names, "symbols": symbols, "obsolete": False}
 
 
 def _ensembl_entity(ensg, timeout=10):
@@ -184,12 +186,14 @@ def _ensembl_entity(ensg, timeout=10):
         d = json.loads(body.decode())
     except Exception:
         return None
-    names = []
+    names, symbols = [], []
     if d.get("display_name"):
         names.append(d["display_name"])
+        symbols.append(d["display_name"])
     if d.get("description"):
         names.append(d["description"].split(" [")[0])
-    return {"primary": d.get("display_name"), "names": names}
+    return {"primary": d.get("display_name"), "names": names,
+            "symbols": symbols, "obsolete": False}
 
 
 def fetch_entity(kind, curie, arg, timeout=10):

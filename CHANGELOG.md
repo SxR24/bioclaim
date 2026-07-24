@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+- Entity-correspondence checking for UniProt/Ensembl: a real, valid accession
+  attached to the wrong gene (e.g. "the UniProt for TP53 is P38398", which is
+  actually BRCA1) is now flagged `SUPPORTED_ENTITY_MISMATCH`. Closes the biggest
+  accuracy gap — real-but-wrong identifiers previously passed existence checks.
+- Gene-symbol detection is stoplist-filtered and ignores other identifiers, to
+  preserve the never-falsely-accuse guarantee.
+- New `scripts/demo_entity.py`; eval harness reports a "wrong-entity" category.
+
 ## 0.5.0
 - Claim verification: label-consistency checking. A real identifier with a wrong
   description (e.g. `GO:0006281 (photosynthesis)`, actually "DNA repair") is now
