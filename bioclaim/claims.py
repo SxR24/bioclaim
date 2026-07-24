@@ -48,6 +48,17 @@ def _normalize(s):
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", s.lower())).strip()
 
 
+def _is_placeholder(name, curie):
+    """A 'name' that is really just the identifier echoed back (e.g. 'GO_0016021')
+    carries no information - never accuse a mismatch against it."""
+    n = _normalize(name)
+    return not n or n == _normalize(curie) or n == _normalize(curie.replace(":", "_"))
+
+
+def _real_names(names, curie):
+    return [n for n in names if not _is_placeholder(n, curie)]
+
+
 def _matches(claimed, names):
     """True (match) / False (mismatch) / None (nothing to compare)."""
     c = _normalize(claimed)
@@ -105,10 +116,16 @@ def check_claims(text, online=True):
                 ent = sources.fetch_entity(kind, curie, arg)
                 if ent:
                     canonical = ent.get("primary")
-                    m = _matches(claimed, ent.get("names", []))
-                    status = ("SUPPORTED_LABEL_OK" if m is True
-                              else "SUPPORTED_LABEL_MISMATCH" if m is False
-                              else "SUPPORTED_NO_LABEL")
+                    if ent.get("obsolete"):
+                        # deprecated identifier: an honest, distinct finding,
+                        # never a label "mismatch" against a stale name.
+                        status = "SUPPORTED_OBSOLETE"
+                    else:
+                        names = _real_names(ent.get("names", []), curie)
+                        m = _matches(claimed, names)
+                        status = ("SUPPORTED_LABEL_OK" if m is True
+                                  else "SUPPORTED_LABEL_MISMATCH" if m is False
+                                  else "SUPPORTED_NO_LABEL")
                 # ent is None -> leave status SUPPORTED (couldn't fetch name)
         out.append(ClaimVerdict(curie, prefix, kind_label, claimed,
                                 canonical, status, start, end))
@@ -119,7 +136,7 @@ def report_claims(text, online=True):
     verdicts = check_claims(text, online=online)
     flagged = [v for v in verdicts
                if v.status in ("NOT_FOUND", "INVALID_FORMAT",
-                               "SUPPORTED_LABEL_MISMATCH")]
+                               "SUPPORTED_LABEL_MISMATCH", "SUPPORTED_OBSOLETE")]
     return {
         "n_ids": len(verdicts),
         "n_flagged": len(flagged),

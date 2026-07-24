@@ -132,16 +132,19 @@ def _ols_entity(curie, slug, timeout=10):
     if not terms:
         return None
     t = terms[0]
+    label = t.get("label")
+    obsolete = bool(t.get("is_obsolete")) or (
+        isinstance(label, str) and label.lower().startswith("obsolete"))
     names = []
-    if t.get("label"):
-        names.append(t["label"])
+    if label:
+        names.append(label)
     for s in t.get("synonyms") or []:
         if isinstance(s, str):
             names.append(s)
     for s in t.get("obo_synonym") or []:
         if isinstance(s, dict) and s.get("name"):
             names.append(s["name"])
-    return {"primary": t.get("label"), "names": names}
+    return {"primary": label, "names": names, "obsolete": obsolete}
 
 
 def _uniprot_entity(acc, timeout=10):
