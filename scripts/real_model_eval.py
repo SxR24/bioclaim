@@ -8,16 +8,19 @@ identifiers, then uses bioclaim to check every identifier the model produced
 against the authoritative source. A NOT_FOUND identifier is a fabrication -
 by construction, because the source database says it does not exist.
 
-Supports OpenAI and Anthropic. You supply the API key via environment variable.
+Supports OpenAI, Anthropic, and any OpenAI-compatible API (xAI/Grok, Groq,
+OpenRouter, local Ollama). You supply the API key via environment variable -
+never hard-code it, or it leaks into git.
 
-Setup:
-    pip install openai        # for --provider openai
-    pip install anthropic     # for --provider anthropic
-    set OPENAI_API_KEY=...    (Windows)   or   export OPENAI_API_KEY=...  (mac/Linux)
+Setup (xAI / Grok example, Windows):
+    pip install openai
+    set XAI_API_KEY=your_key_here
 
 Run (from the repo root):
-    python scripts/real_model_eval.py --provider openai   --model gpt-4o-mini
+    python scripts/real_model_eval.py --provider xai       --model grok-4.5
+    python scripts/real_model_eval.py --provider openai    --model gpt-4o-mini
     python scripts/real_model_eval.py --provider anthropic --model claude-3-5-sonnet-latest --n 20
+    python scripts/real_model_eval.py --provider groq      --model llama-3.3-70b-versatile
 
 Output: a headline stat, plus real_model_report.csv with the evidence
 (every question, the model's answer, and each identifier's verdict).
@@ -47,9 +50,20 @@ def load_questions(path, n=None):
     return qs[:n] if n else qs
 
 
-def ask_openai(model, question):
+# OpenAI-compatible providers: base URL + which env var holds the key.
+# xAI (Grok), Groq, OpenRouter and Ollama all speak the OpenAI API.
+OPENAI_COMPATIBLE = {
+    "openai": (None, "OPENAI_API_KEY"),
+    "xai":    ("https://api.x.ai/v1", "XAI_API_KEY"),
+    "groq":   ("https://api.groq.com/openai/v1", "GROQ_API_KEY"),
+    "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
+    "ollama": ("http://localhost:11434/v1", "OLLAMA_API_KEY"),  # any value works locally
+}
+
+
+def ask_openai(model, question, base_url=None, api_key=None):
     from openai import OpenAI
-    client = OpenAI()
+    client = OpenAI(base_url=base_url, api_key=api_key)
     resp = client.chat.completions.create(
         model=model,
         messages=[{"role": "system", "content": SYSTEM_PROMPT},
@@ -71,14 +85,25 @@ def ask_anthropic(model, question):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--provider", choices=["openai", "anthropic"], required=True)
-    ap.add_argument("--model", required=True, help="e.g. gpt-4o-mini or claude-3-5-sonnet-latest")
+    ap.add_argument("--provider",
+                    choices=["openai", "anthropic", "xai", "groq", "openrouter", "ollama"],
+                    required=True)
+    ap.add_argument("--model", required=True, help="e.g. grok-4.5, gpt-4o-mini, claude-3-5-sonnet-latest")
     ap.add_argument("--n", type=int, default=None, help="number of questions (default: all)")
     ap.add_argument("--questions", default="data/bio_questions.txt")
     ap.add_argument("--out", default="real_model_report.csv")
     args = ap.parse_args()
 
-    ask = ask_openai if args.provider == "openai" else ask_anthropic
+    if args.provider == "anthropic":
+        ask = ask_anthropic
+    else:
+        base_url, key_env = OPENAI_COMPATIBLE[args.provider]
+        api_key = os.environ.get(key_env) or os.environ.get("OPENAI_API_KEY") or "ollama"
+        if args.provider != "ollama" and not os.environ.get(key_env):
+            print(f"ERROR: set your API key first, e.g.  set {key_env}=...")
+            sys.exit(1)
+        ask = lambda m, q: ask_openai(m, q, base_url=base_url, api_key=api_key)
+
     questions = load_questions(args.questions, args.n)
     print(f"Querying {args.provider}:{args.model} on {len(questions)} questions...\n")
 
