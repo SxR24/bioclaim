@@ -12,9 +12,11 @@ dist/
 venv/
 env/
 
-# Generated benchmark artifacts (reproducible via scripts/)
+# Generated benchmark / evaluation artifacts (reproducible via scripts/)
 data/benchmark_large.jsonl
-*_report.csv
+*.csv
+*.meta.json
+!data/*.csv          # keep any curated data CSVs if added later
 
 # Editor / OS
 .vscode/
