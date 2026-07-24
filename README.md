@@ -10,8 +10,10 @@ research and clinical settings that is a documented safety risk. `bioclaim` is a
 deterministic, low-latency layer that catches it.
 
 > **Real-model finding:** on 40 specialist biology questions, Llama-3.3-70B
-> fabricated a biomedical identifier in **15% of answers** — almost always when
-> asked to produce a fixed number of IDs. Full study: [RESULTS.md](RESULTS.md).
+> produced a fabricated, mislabeled, or obsolete biomedical identifier in
+> **~32% of answers** — and two-thirds of those errors (real IDs with wrong or
+> stale descriptions) are invisible to existence-checking alone. Full study:
+> [RESULTS.md](RESULTS.md).
 
 ## Benchmark result
 

@@ -1,66 +1,74 @@
-# Results: how often does an LLM invent biomedical identifiers?
+# Results: how often does an LLM get biomedical identifiers wrong?
 
-**Headline:** On 40 specialist biology questions, **Llama-3.3-70B fabricated a
-biomedical identifier in 15% of answers** (6/40). Overall, **~4.7% of all
-identifiers it produced (7/148) did not exist** in their source database.
+**Headline:** on 40 specialist biology questions, **Llama-3.3-70B produced a
+fabricated, mislabeled, or obsolete biomedical identifier in ~32% of answers**
+(13/40). Of 150 identifiers it generated, **22 (~15%) were wrong** in one of
+three distinct ways — and two-thirds of those errors are invisible to
+existence-checking alone.
 
 ## Setup
 
 | | |
 | --- | --- |
-| Model | `llama-3.3-70b-versatile` (via Groq) |
+| Model | `llama-3.3-70b-versatile` (via Groq), temperature 0.2 |
 | Questions | 40 specialist prompts on genes, proteins, rare diseases (`data/bio_questions_hard.txt`) |
 | Verification | Every identifier checked live against UniProtKB, Ensembl, GO, HPO, MONDO, ChEBI |
-| "Fabricated" | Identifier returns *not found* from its authoritative source database |
-| Network failures | 0 (every identifier was actually verified) |
+| Network failures | 0 |
 
-The questions deliberately target the **long tail** — obscure-but-real genes
-(TMEM63C, ZC3H14, ARMC9), rare diseases (alkaptonuria, Menkes), and quota-style
-prompts ("list N GO terms with their IDs"). This is where LLMs are least
-reliable and where researchers actually get burned.
+Questions target the long tail — obscure-but-real genes, rare diseases, and
+quota prompts ("list N GO terms with IDs"), where LLMs are least reliable.
 
 ## Findings
 
-| Metric | Value |
-| --- | --- |
-| Answers with ≥1 fabricated identifier | **6 / 40 (15%)** |
-| Identifiers examined | 148 |
-| Fabricated (not in source database) | **7 (4.7%)** |
-| Unverifiable (network) | 0 |
-
-### The quota trap
-
-Nearly every fabrication appeared in response to a prompt asking for a **specific
-number** of identifiers ("list 6 GO terms with their IDs"). Rather than return
-fewer, the model padded the list with plausible-looking fakes. Direct single-fact
-questions ("what is the UniProt accession for X?") were almost always correct —
-the model fabricates when pushed to fill a quota it can't satisfy.
-
-### Evidence
-
-| Fabricated ID | Type | Prompt |
+| Category | Meaning | Count |
 | --- | --- | --- |
-| ENSG00000169351 | Ensembl gene | list 8 GO biological process terms (FUS) |
-| ENSG00000163601 | Ensembl gene | list 7 GO cellular component terms |
-| ENSG00000124457 | Ensembl gene | list 5 GO terms (GRIN2B) |
-| HP:0007226 | HPO term | progressive myoclonic epilepsy |
-| GO:0039787 | GO term | list 6 GO molecular function terms (KIF1A) |
-| ENSG00000116217 | Ensembl gene | list 6 GO molecular function terms (KIF1A) |
-| ENSG00000188307 | Ensembl gene | give 7 GO terms (SCN2A) |
+| **Fabricated** | Identifier does not exist in any database | 8 |
+| **Mislabeled** | Real identifier, but the model's description is wrong | 10 |
+| **Obsolete** | Real identifier, but deprecated/retired | 4 |
+| **Total wrong** | | **22 / 150 (15%)** |
+| **Answers affected** | | **13 / 40 (32%)** |
 
-Note the model repeatedly emitted **fake Ensembl gene IDs while being asked for
-GO terms** — conflating identifier types and inventing accessions that resolve
-nowhere. On KIF1A it produced two fabrications in a single answer.
+**Why claim-checking matters:** existence-checking alone would have caught only
+the 8 fabricated IDs. The other 14 problems — real identifiers paired with false
+or stale descriptions — pass every existence check and are only caught by
+verifying the *claim*, not just the *ID*. `bioclaim` catches all 22.
+
+### The most dangerous class: real IDs, wrong meaning
+
+These pass any existence check. The model attaches a plausible description to a
+real GO term that means something entirely different:
+
+| Identifier | Model said | Actually means |
+| --- | --- | --- |
+| GO:0043025 | "cellular amino acid metabolic process" | **neuronal cell body** |
+| GO:0072657 | "regulation of cellular amino acid metabolic process" | **protein localization to membrane** |
+| GO:0046975 | "ATP-dependent chromatin remodeling" | **histone H3K36 methyltransferase activity** |
+| GO:0071567 | "ATPase activity, acting on DNA" | **deUFMylase activity** |
+| GO:0045975 | "regulation of transcription by RNA polymerase II" | **positive regulation of translation, ncRNA-mediated** |
+
+### Fabricated identifiers
+
+Mostly invented Ensembl gene IDs emitted while listing GO terms — e.g.
+`ENSG00000169351`, `ENSG00000188307` — none of which resolve. Plus a fabricated
+HPO code (`HP:0007226`).
+
+### Obsolete identifiers
+
+Four answers cited **deprecated** GO terms (e.g. `GO:0030176`,
+`GO:0016021`) — real once, now retired. `bioclaim` reports these separately as
+`SUPPORTED_OBSOLETE` rather than as a mismatch, so no false accusation is made
+against a stale label.
 
 ## Honest caveats
 
-- **Existence, not correctness.** `bioclaim` checks whether an identifier exists,
-  not whether it is the *right* one for the entity asked. The true error rate is
-  therefore a **floor**, not a ceiling.
-- **Single model, N=40.** This is an illustrative study, not a comprehensive
-  benchmark. Results will vary by model and prompt set.
-- Framing to use publicly: *"invented identifiers that do not exist in the source
-  database,"* not *"got it wrong."*
+- **Single run, N=40.** LLM output is nondeterministic; the answer-level rate
+  varies roughly **30–35%** across runs. This is an illustrative study, not a
+  comprehensive benchmark.
+- **Zero false accusations by design.** Obsolete terms and placeholder labels are
+  handled explicitly so a real (if deprecated) identifier is never mislabeled as
+  fabricated.
+- Framing to use publicly: *"fabricated, mislabeled, or deprecated identifiers,"*
+  each defined precisely above.
 
 ## Reproduce
 
@@ -72,4 +80,5 @@ python scripts/real_model_eval.py --provider groq \
     --questions data/bio_questions_hard.txt
 ```
 
-Evidence is written to `real_model_report.csv` (per-identifier verdicts).
+Per-identifier evidence (claimed label vs. real label) is written to
+`real_model_report.csv`.
