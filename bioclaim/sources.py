@@ -110,3 +110,96 @@ def exists(kind, curie, arg, timeout=10):
         res = None
     _CACHE[key] = res
     return res
+
+
+# ---------------------------------------------------------------------------
+# v0.5: fetch the canonical name(s) of an entity, for claim/label verification.
+# Returns {"primary": <name>, "names": [name, synonyms...]} or None.
+# ---------------------------------------------------------------------------
+_ENTITY_CACHE = {}
+
+
+def _ols_entity(curie, slug, timeout=10):
+    url = (f"https://www.ebi.ac.uk/ols4/api/ontologies/{slug}/terms"
+           f"?obo_id={urllib.parse.quote(curie)}")
+    code, body = _http(url, timeout)
+    if code != 200 or body is None:
+        return None
+    try:
+        terms = json.loads(body.decode()).get("_embedded", {}).get("terms", [])
+    except Exception:
+        return None
+    if not terms:
+        return None
+    t = terms[0]
+    names = []
+    if t.get("label"):
+        names.append(t["label"])
+    for s in t.get("synonyms") or []:
+        if isinstance(s, str):
+            names.append(s)
+    for s in t.get("obo_synonym") or []:
+        if isinstance(s, dict) and s.get("name"):
+            names.append(s["name"])
+    return {"primary": t.get("label"), "names": names}
+
+
+def _uniprot_entity(acc, timeout=10):
+    code, body = _http(f"https://rest.uniprot.org/uniprotkb/{acc}.json", timeout)
+    if code != 200 or body is None:
+        return None
+    try:
+        d = json.loads(body.decode())
+    except Exception:
+        return None
+    names = []
+    pd = d.get("proteinDescription", {})
+    rec = pd.get("recommendedName", {}).get("fullName", {}).get("value")
+    if rec:
+        names.append(rec)
+    for alt in pd.get("alternativeNames", []) or []:
+        v = alt.get("fullName", {}).get("value")
+        if v:
+            names.append(v)
+    for g in d.get("genes", []) or []:
+        gn = g.get("geneName", {}).get("value")
+        if gn:
+            names.append(gn)
+        for syn in g.get("synonyms", []) or []:
+            if syn.get("value"):
+                names.append(syn["value"])
+    return {"primary": rec, "names": names}
+
+
+def _ensembl_entity(ensg, timeout=10):
+    code, body = _http(
+        f"https://rest.ensembl.org/lookup/id/{ensg}?content-type=application/json",
+        timeout)
+    if code != 200 or body is None:
+        return None
+    try:
+        d = json.loads(body.decode())
+    except Exception:
+        return None
+    names = []
+    if d.get("display_name"):
+        names.append(d["display_name"])
+    if d.get("description"):
+        names.append(d["description"].split(" [")[0])
+    return {"primary": d.get("display_name"), "names": names}
+
+
+def fetch_entity(kind, curie, arg, timeout=10):
+    key = (kind, curie)
+    if key in _ENTITY_CACHE:
+        return _ENTITY_CACHE[key]
+    if kind == "ols":
+        res = _ols_entity(curie, arg, timeout)
+    elif kind == "uniprot":
+        res = _uniprot_entity(curie, timeout)
+    elif kind == "ensembl":
+        res = _ensembl_entity(curie, timeout)
+    else:
+        res = None
+    _ENTITY_CACHE[key] = res
+    return res

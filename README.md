@@ -41,8 +41,16 @@ marked `UNVERIFIED`, never `NOT_FOUND`):
 2. **EXISTS** — live existence check against the source database. Well-formed but absent
    identifiers are flagged `NOT_FOUND`. Rate-limit/network errors are retried with backoff,
    then degrade to `UNVERIFIED`.
+3. **CLAIM (v0.5)** — label consistency. A *real* identifier with a *wrong* description
+   (`GO:0006281 (photosynthesis)`, actually "DNA repair") is flagged
+   `SUPPORTED_LABEL_MISMATCH`. Synonym-aware, so paraphrases aren't falsely flagged.
 
 Supported identifier types: GO, HP, MONDO, DOID, CHEBI, Ensembl gene (ENSG), UniProtKB.
+
+```python
+from bioclaim import report_claims
+r = report_claims("Model says GO:0006281 (photosynthesis).")   # -> SUPPORTED_LABEL_MISMATCH
+```
 
 ## Install & use
 

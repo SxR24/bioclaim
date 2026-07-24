@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+- Claim verification: label-consistency checking. A real identifier with a wrong
+  description (e.g. `GO:0006281 (photosynthesis)`, actually "DNA repair") is now
+  flagged `SUPPORTED_LABEL_MISMATCH` — existence checking alone would pass it.
+- Synonym-aware matching (pulls term synonyms from the source) so paraphrases
+  like "apoptosis" vs "apoptotic process" are not falsely flagged.
+- New: `bioclaim.check_claims` / `report_claims`, `scripts/demo_claims.py`.
+
 ## 0.3.0
 - Added polite throttling and retry-with-backoff to all database checkers.
 - Rate-limit responses (429/503) are now retried instead of counted as "unknown".

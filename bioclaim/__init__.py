@@ -1,3 +1,5 @@
 from .validator import scan, report, Verdict
-__all__ = ["scan", "report", "Verdict"]
-__version__ = "0.3.0"
+from .claims import check_claims, report_claims, ClaimVerdict
+__all__ = ["scan", "report", "Verdict",
+           "check_claims", "report_claims", "ClaimVerdict"]
+__version__ = "0.5.0"
