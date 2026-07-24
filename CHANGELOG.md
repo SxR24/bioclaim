@@ -1,11 +1,11 @@
 # Changelog
 
 ## 0.7.5
-- Prevent false "obsolete" flags: when the ontology service returns several entries
-  for one id (an active term plus an obsolete duplicate/alt-id), prefer the ACTIVE,
-  defining term. A live term (e.g. GO:0005615 "extracellular space") is no longer
-  mislabeled obsolete because a stale duplicate came first. Genuinely obsolete
-  terms are still flagged.
+- Defensive: when the ontology service returns several entries for one id, prefer
+  the active, defining term so an active term can't be mislabeled obsolete by a
+  stale duplicate. (Genuinely deprecated terms are still flagged - e.g. GO:0005615
+  "extracellular space" is really obsolete, replaced by GO:0005576 "extracellular
+  region", and remains flagged. Verified against EBI OLS.)
 
 ## 0.7.4
 - Detect **deleted / demerged UniProt accessions**. These return HTTP 200 with
