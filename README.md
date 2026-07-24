@@ -52,25 +52,39 @@ marked `UNVERIFIED`, never `NOT_FOUND`):
 
 Supported identifier types: GO, HP, MONDO, DOID, CHEBI, Ensembl gene (ENSG), UniProtKB.
 
-```python
-from bioclaim import report_claims
-r = report_claims("Model says GO:0006281 (photosynthesis).")   # -> SUPPORTED_LABEL_MISMATCH
-```
+Every lookup is **cached to disk** ($BIOCLAIM_CACHE, else `~/.cache/bioclaim/`), so
+after a warm-up bioclaim runs fast, offline-capable, and immune to rate limits.
 
 ## Install & use
 
 ```bash
-git clone https://github.com/SxR24/bioclaim.git
-cd bioclaim
-pip install -e .          # optional; scripts also run without installing
+pip install -e .           # from a clone; PyPI release: pip install bioclaim
 ```
 
-```python
-from bioclaim import report
+**One-call API:**
 
-r = report("TP53 (P04637) is annotated with GO:0006915 and the invalid term GO:9999999.")
-for v in r["verdicts"]:
-    print(v["curie"], v["status"])   # SUPPORTED | NOT_FOUND | INVALID_FORMAT | UNVERIFIED
+```python
+from bioclaim import check
+
+result = check("TP53 (P04637) is annotated with GO:9999999 (apoptosis).")
+print(result.ok)           # False
+for p in result.problems:
+    print(p)               # GO:9999999: fabricated (does not exist)
+```
+
+**Guard any model call** (raises if a fabrication slips through):
+
+```python
+from bioclaim import Firewall
+guarded = Firewall(raise_on_flag=True).guard(call_my_llm)
+answer = guarded(prompt)   # BioclaimFlag raised if the answer cites a fake ID
+```
+
+**Command line:**
+
+```bash
+bioclaim "TP53 is P04637 and the fake GO:9999999"
+echo "some model output" | bioclaim --entity BRCA1
 ```
 
 ## Project layout

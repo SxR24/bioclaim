@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 - "Deployable & reliable"
+- **Persistent on-disk cache** for every database lookup: after a warm-up, bioclaim
+  runs fast, offline-capable, and immune to rate limits (each id fetched at most
+  once, ever). Only definitive results are cached; transient failures never poison it.
+- **One-call API:** `check(text, entity_hint=...) -> Result` with `.ok` / `.problems`.
+- **`Firewall`** wrapper to guard any model-calling function (optionally raising).
+- **`bioclaim` command-line tool** (`pip install` provides it; also `python -m bioclaim`).
+- Non-zero exit code when identifiers are flagged (CI / guardrail friendly).
+
 ## 0.6.1
 - **Precision fix for entity-correspondence.** The v0.6 check guessed the gene from
   text near the identifier, which produced false positives on densely-formatted

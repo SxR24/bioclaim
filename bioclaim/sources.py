@@ -15,8 +15,10 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-_CACHE = {}
-_HEADERS = {"User-Agent": "bioclaim/0.3 (grounding-firewall)"}
+from .cache import DiskCache, MISS
+
+_CACHE = DiskCache("exists")          # persistent: id -> exists (bool)
+_HEADERS = {"User-Agent": "bioclaim/0.7 (grounding-firewall)"}
 
 # be a good API citizen: minimum gap between outbound requests
 _MIN_INTERVAL = 0.06
@@ -96,10 +98,15 @@ def check_ensembl(ensg, timeout=10):
 
 
 def exists(kind, curie, arg, timeout=10):
-    """Dispatch to the right database checker, with caching."""
-    key = (kind, curie)
-    if key in _CACHE:
-        return _CACHE[key]
+    """Dispatch to the right database checker, with persistent caching.
+
+    Only definitive True/False is cached; a None (network failure) is never
+    stored, so a transient hiccup can't poison the cache.
+    """
+    key = f"{kind}:{curie}"
+    cached = _CACHE.get(key)
+    if cached is not MISS:
+        return cached
     if kind == "ols":
         res = check_ols(curie, arg, timeout)
     elif kind == "uniprot":
@@ -108,7 +115,8 @@ def exists(kind, curie, arg, timeout=10):
         res = check_ensembl(curie, timeout)
     else:
         res = None
-    _CACHE[key] = res
+    if res is not None:
+        _CACHE.set(key, res)
     return res
 
 
@@ -116,7 +124,7 @@ def exists(kind, curie, arg, timeout=10):
 # v0.5: fetch the canonical name(s) of an entity, for claim/label verification.
 # Returns {"primary": <name>, "names": [name, synonyms...]} or None.
 # ---------------------------------------------------------------------------
-_ENTITY_CACHE = {}
+_ENTITY_CACHE = DiskCache("entities")   # persistent: id -> entity dict
 
 
 def _ols_entity(curie, slug, timeout=10):
@@ -197,9 +205,10 @@ def _ensembl_entity(ensg, timeout=10):
 
 
 def fetch_entity(kind, curie, arg, timeout=10):
-    key = (kind, curie)
-    if key in _ENTITY_CACHE:
-        return _ENTITY_CACHE[key]
+    key = f"{kind}:{curie}"
+    cached = _ENTITY_CACHE.get(key)
+    if cached is not MISS:
+        return cached
     if kind == "ols":
         res = _ols_entity(curie, arg, timeout)
     elif kind == "uniprot":
@@ -208,5 +217,6 @@ def fetch_entity(kind, curie, arg, timeout=10):
         res = _ensembl_entity(curie, timeout)
     else:
         res = None
-    _ENTITY_CACHE[key] = res
+    if res is not None:
+        _ENTITY_CACHE.set(key, res)
     return res

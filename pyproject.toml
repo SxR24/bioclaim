@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bioclaim"
-version = "0.5.0"
+version = "0.7.0"
 description = "A grounding firewall for biomedical LLMs: verifies biological identifiers and claims against authoritative databases, and flags fabrications."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,9 @@ dependencies = []  # standard library only
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+
+[project.scripts]
+bioclaim = "bioclaim.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/SxR24/bioclaim"

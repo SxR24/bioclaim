@@ -240,12 +240,13 @@ def check_claims(text, online=True, entity_hint=None):
     return out
 
 
-def report_claims(text, online=True):
-    verdicts = check_claims(text, online=online)
-    flagged = [v for v in verdicts
-               if v.status in ("NOT_FOUND", "INVALID_FORMAT",
-                               "SUPPORTED_LABEL_MISMATCH", "SUPPORTED_OBSOLETE",
-                               "SUPPORTED_ENTITY_MISMATCH")]
+FLAGGED_STATUSES = ("NOT_FOUND", "INVALID_FORMAT", "SUPPORTED_LABEL_MISMATCH",
+                    "SUPPORTED_OBSOLETE", "SUPPORTED_ENTITY_MISMATCH")
+
+
+def report_claims(text, online=True, entity_hint=None):
+    verdicts = check_claims(text, online=online, entity_hint=entity_hint)
+    flagged = [v for v in verdicts if v.status in FLAGGED_STATUSES]
     return {
         "n_ids": len(verdicts),
         "n_flagged": len(flagged),
