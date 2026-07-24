@@ -1,0 +1,1 @@
+{"model": "llama-3.1-8b-instant", "n": 40, "answered": 40, "skipped": 0, "answers_flagged": 27, "total_ids": 140, "fabricated": 7, "mislabeled": 28, "wrong_entity": 30, "obsolete": 7}
