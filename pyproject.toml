@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bioclaim"
+version = "0.3.0"
+description = "A grounding firewall for biomedical LLMs: verifies biological identifiers and claims against authoritative databases, and flags fabrications."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Sohil Ananth", email = "sohil.r@icloud.com" }]
+keywords = ["bioinformatics", "llm", "hallucination", "grounding", "genomics", "ontology"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = []  # standard library only
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/your-username/bioclaim"
+Issues = "https://github.com/your-username/bioclaim/issues"
+
+[tool.setuptools]
+packages = ["bioclaim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

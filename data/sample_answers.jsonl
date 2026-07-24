@@ -1,0 +1,10 @@
+{"id": 1, "answer": "TP53 (UniProt P04637, gene ENSG00000141510) drives apoptosis via GO:0006915. Its loss is linked to seizures, HP:0001250.", "fabricated": []}
+{"id": 2, "answer": "BRCA1 corresponds to UniProt P38398 and gene ENSG00000012048, and participates in the biological process GO:0008150. A related annotation is the invented term GO:9999999.", "fabricated": ["GO:9999999"]}
+{"id": 3, "answer": "The membrane component is GO:0016020. The patient phenotype maps to HP:0001250 and the fabricated code HP:9999999.", "fabricated": ["HP:9999999"]}
+{"id": 4, "answer": "Water is CHEBI:15377. This chemical annotation is well established and stable across releases.", "fabricated": []}
+{"id": 5, "answer": "The gene of interest is ENSG99999999999 with product Q0Q0Q0, both of which the model asserts confidently.", "fabricated": ["ENSG99999999999"]}
+{"id": 6, "answer": "Apoptotic process GO:0006915 and biological_process GO:0008150 are both parents in the ontology graph for this study.", "fabricated": []}
+{"id": 7, "answer": "The variant affects TP53 (P04637). The model also cites the non-existent phenotype HP:9999998 and the bogus term GO:9999998.", "fabricated": ["HP:9999998", "GO:9999998"]}
+{"id": 8, "answer": "Nervous system abnormality is captured by HP:0000707, and the membrane term GO:0016020 localizes the product ENSG00000141510.", "fabricated": []}
+{"id": 9, "answer": "According to the model, BRCA1 (P38398) is annotated with the made-up GO:9999997 and localizes to GO:0016020.", "fabricated": ["GO:9999997"]}
+{"id": 10, "answer": "The apoptosis pathway (GO:0006915) involves TP53 (ENSG00000141510) and its phenotype HP:0001250, with no fabricated identifiers here.", "fabricated": []}
