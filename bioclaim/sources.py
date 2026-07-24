@@ -149,7 +149,11 @@ def _ols_entity(curie, slug, timeout=10):
         return None
     if not terms:
         return None
-    t = terms[0]
+    # OLS can return several entries for one id (e.g. an active term plus an
+    # obsolete duplicate/alt-id). Prefer the ACTIVE, defining term so a live
+    # term is never mislabeled obsolete because a stale duplicate came first.
+    t = max(terms, key=lambda x: (not bool(x.get("is_obsolete")),
+                                  bool(x.get("is_defining_ontology"))))
     label = t.get("label")
     obsolete = bool(t.get("is_obsolete")) or (
         isinstance(label, str) and label.lower().startswith("obsolete"))
