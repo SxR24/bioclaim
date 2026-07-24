@@ -17,7 +17,10 @@ ID_PATTERNS = {
     "DOID":    (re.compile(r"\bDOID:\d+\b"),    "ols",     "doid",  "Disease Ontology term"),
     "CHEBI":   (re.compile(r"\bCHEBI:\d+\b"),   "ols",     "chebi", "ChEBI chemical entity"),
     "ENSG":    (re.compile(r"\bENSG\d{11}\b"),  "ensembl", None,    "Ensembl human gene"),
-    "UNIPROT": (re.compile(r"\b[OPQ][0-9][A-Z0-9]{3}[0-9]\b"), "uniprot", None, "UniProtKB accession"),
+    # Full official UniProtKB accession syntax (both forms), not just O/P/Q:
+    "UNIPROT": (re.compile(
+        r"\b(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2})\b"),
+        "uniprot", None, "UniProtKB accession"),
 }
 
 

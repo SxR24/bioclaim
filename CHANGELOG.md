@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.3
+- **Full UniProtKB accession coverage.** The extractor previously matched only the
+  O/P/Q accession form and silently ignored the second official form (starting
+  A-N/R-Z, e.g. `J8XYZ9`, `U7FD21`), so fabricated accessions in that range were
+  never checked. Now uses the complete official accession syntax. Surfaced by an
+  expert paragraph seeded with fake accessions.
+
 ## 0.7.2
 - Cleaner obsolete-term output: no longer shows the placeholder short-form (e.g.
   "GO_0007050") as the "real" name; reads `obsolete / deprecated (labeled "...")`.
