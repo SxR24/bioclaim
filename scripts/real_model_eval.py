@@ -60,6 +60,8 @@ OPENAI_COMPATIBLE = {
     "openai": (None, "OPENAI_API_KEY"),
     "xai":    ("https://api.x.ai/v1", "XAI_API_KEY"),
     "groq":   ("https://api.groq.com/openai/v1", "GROQ_API_KEY"),
+    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai/", "GEMINI_API_KEY"),
+    "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY"),
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
     "ollama": ("http://localhost:11434/v1", "OLLAMA_API_KEY"),  # any value works locally
 }
@@ -90,7 +92,8 @@ def ask_anthropic(model, question):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--provider",
-                    choices=["openai", "anthropic", "xai", "groq", "openrouter", "ollama"],
+                    choices=["openai", "anthropic", "xai", "groq", "gemini",
+                             "nvidia", "openrouter", "ollama"],
                     required=True)
     ap.add_argument("--model", required=True, help="e.g. grok-4.5, gpt-4o-mini, claude-3-5-sonnet-latest")
     ap.add_argument("--n", type=int, default=None, help="number of questions (default: all)")
