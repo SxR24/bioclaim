@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1
+- **Precision fix for entity-correspondence.** The v0.6 check guessed the gene from
+  text near the identifier, which produced false positives on densely-formatted
+  (e.g. markdown-table) answers. It is now anchored to a known `entity_hint` (the
+  gene the question is about); without a hint, correspondence is never accused.
+- `check_claims(text, entity_hint=...)`, `extract_target_entity(question)`.
+- New `scripts/rescore.py`: recompute an existing eval report with current logic
+  using only database lookups - no model re-runs.
+
 ## 0.6.0
 - Entity-correspondence checking for UniProt/Ensembl: a real, valid accession
   attached to the wrong gene (e.g. "the UniProt for TP53 is P38398", which is

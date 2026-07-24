@@ -46,13 +46,28 @@ def test_entity_correspondence(monkeypatch=None):
                    "names": ["TP53", "P53"], "symbols": ["TP53", "P53"],
                    "obsolete": False},
     }.get(curie)
-    ok = {v.curie: v.status
-          for v in claims.check_claims("BRCA1 has UniProt P38398.", online=True)}
-    bad = {v.curie: v.status
-           for v in claims.check_claims("BRCA1 has UniProt P04637.", online=True)}
+    # v0.6: entity check is anchored to the known gene (entity_hint)
+    ok = {v.curie: v.status for v in claims.check_claims(
+        "BRCA1 has UniProt P38398.", online=True, entity_hint="BRCA1")}
+    bad = {v.curie: v.status for v in claims.check_claims(
+        "BRCA1 has UniProt P04637.", online=True, entity_hint="BRCA1")}
     assert ok["P38398"] == "SUPPORTED_ENTITY_OK"
     assert bad["P04637"] == "SUPPORTED_ENTITY_MISMATCH"
+    # without a hint, correspondence is never accused
+    none = {v.curie: v.status for v in claims.check_claims(
+        "BRCA1 has UniProt P04637.", online=True, entity_hint=None)}
+    assert none["P04637"] == "SUPPORTED_NO_LABEL"
     print("entity-correspondence test passed")
+
+
+def test_target_entity_extraction():
+    ex = claims.extract_target_entity
+    assert ex("List 8 GO terms for the gene FUS.") == "FUS"
+    assert ex("What is the UniProt accession for the human protein CFTR?") == "CFTR"
+    assert ex("UniProt for the human protein Neurexin-1 (NRXN1)?") == "NRXN1"
+    assert ex("Provide 6 GO molecular function terms for SOD1.") == "SOD1"
+    assert ex("What MONDO ID corresponds to Fabry disease?") is None
+    print("target-entity extraction test passed")
 
 
 if __name__ == "__main__":
@@ -60,4 +75,5 @@ if __name__ == "__main__":
     test_matching_is_synonym_aware()
     test_end_to_end_with_mocked_db()
     test_entity_correspondence()
+    test_target_entity_extraction()
     print("OK")

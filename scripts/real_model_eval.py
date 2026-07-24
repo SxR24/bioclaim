@@ -35,6 +35,7 @@ import pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from bioclaim import check_claims
+from bioclaim.claims import extract_target_entity
 
 FABRICATED = {"NOT_FOUND", "INVALID_FORMAT"}   # invented identifiers
 MISLABELED = {"SUPPORTED_LABEL_MISMATCH"}       # real id, wrong description
@@ -159,7 +160,8 @@ def main():
             continue
         answered += 1
 
-        verdicts = check_claims(answer, online=True)
+        verdicts = check_claims(answer, online=True,
+                                entity_hint=extract_target_entity(q))
         fab = [v for v in verdicts if v.status in FABRICATED]
         mis = [v for v in verdicts if v.status in MISLABELED]
         ent = [v for v in verdicts if v.status in WRONG_ENTITY]

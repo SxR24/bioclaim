@@ -134,6 +134,44 @@ def _entity_status(curie, kind, arg, claimed_label, window_before):
     return "SUPPORTED_NO_LABEL", canonical
 
 
+def extract_target_entity(question):
+    """Best-effort: the gene/protein a question is asking about.
+
+    Reliable because our questions are structured ("...for the gene FUS",
+    "...human protein Neurexin-1 (NRXN1)"). Used to anchor entity-correspondence
+    to the KNOWN entity instead of guessing from nearby text.
+    """
+    stop = {"ontology", "id", "ids", "the", "human", "a", "an"}
+    m = re.search(r"\(([A-Z][A-Z0-9]{1,9})\)", question)   # (NRXN1), (CNTN4)
+    if m:
+        return m.group(1)
+    # all "gene X" / "protein X" mentions; the real target is the last non-filler
+    # (skips "gene ID", "Gene Ontology", etc.)
+    cands = [c for c in re.findall(r"(?:gene|protein)\s+([A-Za-z][A-Za-z0-9]{1,12})",
+                                   question) if c.lower() not in stop]
+    if cands:
+        return cands[-1]
+    m = re.search(r"\bfor\s+([A-Z][A-Z0-9]{1,9})\b", question)          # for SOD1
+    if m and m.group(1).lower() not in stop:
+        return m.group(1)
+    return None
+
+
+def verify_entity(curie, kind, arg, hint):
+    """Does this UniProt/Ensembl id correspond to the known entity `hint`?
+
+    Returns (status, canonical). Reliable: compares against the id's real gene
+    symbols and names, not text proximity.
+    """
+    ent = sources.fetch_entity(kind, curie, arg)
+    if not ent:
+        return "SUPPORTED", None
+    canonical = ent.get("primary")
+    syms = {s.upper() for s in ent.get("symbols", [])}
+    hit = hint.upper() in syms or _matches(hint, ent.get("names", [])) is True
+    return ("SUPPORTED_ENTITY_OK" if hit else "SUPPORTED_ENTITY_MISMATCH"), canonical
+
+
 def extract_labeled_ids(text):
     """Yield (prefix, curie, claimed_label, start, end).
 
@@ -155,8 +193,14 @@ def extract_labeled_ids(text):
         yield prefix, curie, claimed, start, end
 
 
-def check_claims(text, online=True):
-    """Verify existence AND label consistency for every identifier in text."""
+def check_claims(text, online=True, entity_hint=None):
+    """Verify existence, label consistency, and (with a hint) entity match.
+
+    entity_hint: the gene/protein the text is *about* (e.g. from the question).
+    UniProt/Ensembl IDs are checked against it - reliable, format-independent.
+    Without a hint, correspondence is NOT accused (proximity guessing is
+    unreliable), so the never-falsely-accuse guarantee holds.
+    """
     from .validator import scan
     base = {(v.curie, v.start): v for v in scan(text, online=online)}
     out = []
@@ -168,10 +212,12 @@ def check_claims(text, online=True):
 
         if status == "SUPPORTED" and online:
             if kind in ("uniprot", "ensembl"):
-                # v0.6: check the ID belongs to the claimed gene/entity
-                window = text[max(0, start - 80):start]
-                status, canonical = _entity_status(curie, kind, arg,
-                                                   claimed, window)
+                if entity_hint:
+                    status, canonical = verify_entity(curie, kind, arg, entity_hint)
+                else:
+                    ent = sources.fetch_entity(kind, curie, arg)
+                    canonical = ent.get("primary") if ent else None
+                    status = "SUPPORTED_NO_LABEL"   # no known entity to check against
             elif not claimed:
                 status = "SUPPORTED_NO_LABEL"
             else:
