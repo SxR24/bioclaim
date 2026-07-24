@@ -9,6 +9,10 @@ Large language models constantly emit identifiers that *look* real but don't exi
 research and clinical settings that is a documented safety risk. `bioclaim` is a
 deterministic, low-latency layer that catches it.
 
+> **Real-model finding:** on 40 specialist biology questions, Llama-3.3-70B
+> fabricated a biomedical identifier in **15% of answers** — almost always when
+> asked to produce a fixed number of IDs. Full study: [RESULTS.md](RESULTS.md).
+
 ## Benchmark result
 
 On a labeled set of **500 LLM-style answers** (394 injected fabrications):
