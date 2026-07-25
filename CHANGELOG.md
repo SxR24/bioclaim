@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.6
+- Ignore GO aspect/section headers ("Cellular Component", "Biological Process",
+  "Molecular Function", etc.) as claimed labels. Models group GO terms under these
+  headers; they were being mistaken for term descriptions and flagged as
+  mislabeled. Surfaced by DeepSeek-V4-Pro's section-formatted answers.
+
 ## 0.7.5
 - Defensive: when the ontology service returns several entries for one id, prefer
   the active, defining term so an active term can't be mislabeled obsolete by a

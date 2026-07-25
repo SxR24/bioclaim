@@ -7,4 +7,4 @@ __all__ = [
     "scan", "report", "Verdict",
     "check_claims", "report_claims", "ClaimVerdict", "extract_target_entity",
 ]
-__version__ = "0.7.5"
+__version__ = "0.7.6"

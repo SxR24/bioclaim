@@ -192,6 +192,15 @@ def _tighten_label(phrase):
     return " ".join(words).strip(" ,;:-") or None
 
 
+# GO aspect / section headers models group terms under - NOT term descriptions.
+_ASPECT_HEADERS = {
+    "cellular component", "cellular components", "biological process",
+    "biological processes", "molecular function", "molecular functions",
+    "gene ontology", "go term", "go terms", "go id", "go ids", "ontology",
+    "uniprot", "ensembl", "accession", "gene", "protein",
+}
+
+
 def extract_labeled_ids(text):
     """Yield (prefix, curie, claimed_label, start, end).
 
@@ -211,6 +220,10 @@ def extract_labeled_ids(text):
             m2 = re.search(r"([A-Za-z][A-Za-z0-9 /-]{2,55})\(\s*$", before)
             if m2:
                 claimed = _tighten_label(m2.group(1))
+        # a bare aspect/section header (e.g. "Cellular Component") is not a
+        # description of the term - don't treat it as a claim to check
+        if claimed and _normalize(claimed) in _ASPECT_HEADERS:
+            claimed = None
         yield prefix, curie, claimed, start, end
 
 
