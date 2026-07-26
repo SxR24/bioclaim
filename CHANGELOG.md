@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.1
+- Packaging: modern SPDX license metadata (fixes a PyPI 400 on upload with newer setuptools). No functional change from 0.8.0.
+
 ## 0.8.0 - gene-function association verification
 - **New (opt-in) check:** does the target gene actually carry each GO term? A real,
   correctly-named GO term assigned to a gene that isn't annotated with it (e.g.
