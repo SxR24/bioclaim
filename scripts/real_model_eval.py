@@ -41,7 +41,8 @@ FABRICATED = {"NOT_FOUND", "INVALID_FORMAT"}   # invented identifiers
 MISLABELED = {"SUPPORTED_LABEL_MISMATCH"}       # real id, wrong description
 WRONG_ENTITY = {"SUPPORTED_ENTITY_MISMATCH"}    # real id, wrong gene/entity
 OBSOLETE = {"SUPPORTED_OBSOLETE"}               # real id, but deprecated/retired
-FLAGGED = FABRICATED | MISLABELED | WRONG_ENTITY | OBSOLETE
+FUNCTION = {"SUPPORTED_FUNCTION_UNSUPPORTED"}    # real term, gene not annotated with it
+FLAGGED = FABRICATED | MISLABELED | WRONG_ENTITY | OBSOLETE | FUNCTION
 
 SYSTEM_PROMPT = (
     "You are a biomedical research assistant. Answer each question concisely and "
@@ -132,6 +133,8 @@ def main():
                     help="seconds between calls (raise for tight rate limits, e.g. 13 for Gemini free)")
     ap.add_argument("--retries", type=int, default=4,
                     help="retries with backoff on rate-limit (429) errors")
+    ap.add_argument("--functions", action="store_true",
+                    help="also verify the gene actually carries each GO term (QuickGO)")
     args = ap.parse_args()
 
     if args.provider == "anthropic":
@@ -150,7 +153,7 @@ def main():
     rows = []
     answered = answers_flagged = 0
     total_ids = fabricated_ids = mislabeled_ids = 0
-    wrong_entity_ids = obsolete_ids = unverified_ids = 0
+    wrong_entity_ids = obsolete_ids = function_ids = unverified_ids = 0
 
     try:
       for i, q in enumerate(questions, 1):
@@ -161,18 +164,21 @@ def main():
         answered += 1
 
         verdicts = check_claims(answer, online=True,
-                                entity_hint=extract_target_entity(q))
+                                entity_hint=extract_target_entity(q),
+                                check_functions=args.functions)
         fab = [v for v in verdicts if v.status in FABRICATED]
         mis = [v for v in verdicts if v.status in MISLABELED]
         ent = [v for v in verdicts if v.status in WRONG_ENTITY]
         obs = [v for v in verdicts if v.status in OBSOLETE]
+        fnc = [v for v in verdicts if v.status in FUNCTION]
         total_ids += len(verdicts)
         fabricated_ids += len(fab)
         mislabeled_ids += len(mis)
         wrong_entity_ids += len(ent)
         obsolete_ids += len(obs)
+        function_ids += len(fnc)
         unverified_ids += sum(1 for v in verdicts if v.status == "UNVERIFIED")
-        if fab or mis or ent or obs:
+        if fab or mis or ent or obs or fnc:
             answers_flagged += 1
 
         parts = []
@@ -184,8 +190,10 @@ def main():
             parts.append(f"WRONG-ENTITY x{len(ent)}")
         if obs:
             parts.append(f"OBSOLETE x{len(obs)}")
+        if fnc:
+            parts.append(f"BAD-FUNCTION x{len(fnc)}")
         tag = " + ".join(parts) if parts else "clean"
-        print(f"  [{i:>2}/{len(questions)}] {tag:<34} {q[:36]}")
+        print(f"  [{i:>2}/{len(questions)}] {tag:<40} {q[:32]}")
 
         for v in verdicts:
             rows.append({
@@ -213,7 +221,7 @@ def main():
                "skipped": skipped, "answers_flagged": answers_flagged,
                "total_ids": total_ids, "fabricated": fabricated_ids,
                "mislabeled": mislabeled_ids, "wrong_entity": wrong_entity_ids,
-               "obsolete": obsolete_ids},
+               "obsolete": obsolete_ids, "bad_function": function_ids},
               open(args.out + ".meta.json", "w"))
 
     # rate is over ANSWERED questions, never the full set - a partial run
@@ -230,6 +238,8 @@ def main():
     print(f"  mislabeled (real id, wrong description):  {mislabeled_ids}")
     print(f"  wrong-entity (real id, wrong gene):       {wrong_entity_ids}")
     print(f"  obsolete (real id, deprecated):           {obsolete_ids}")
+    if args.functions:
+        print(f"  bad-function (gene not annotated w/ term): {function_ids}")
     print(f"  unverifiable (network):                   {unverified_ids}")
     print("=" * 60)
     if skipped:

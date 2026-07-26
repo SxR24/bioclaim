@@ -15,6 +15,8 @@ def main(argv=None):
     ap.add_argument("text", nargs="*", help="text to check (or pipe via stdin)")
     ap.add_argument("--entity", default=None,
                     help="the gene/protein the text is about (enables wrong-gene check)")
+    ap.add_argument("--functions", action="store_true",
+                    help="also verify the gene actually carries each GO term (QuickGO)")
     ap.add_argument("--offline", action="store_true",
                     help="format check only; skip database lookups")
     ap.add_argument("--version", action="version", version=f"bioclaim {__version__}")
@@ -24,7 +26,8 @@ def main(argv=None):
     if not text.strip():
         ap.error("no text provided (pass as arguments or via stdin)")
 
-    result = check(text, entity_hint=args.entity, online=not args.offline)
+    result = check(text, entity_hint=args.entity, online=not args.offline,
+                   check_functions=args.functions)
     print(result)
     return 1 if not result.ok else 0
 

@@ -33,16 +33,19 @@ def _throttle():
     _last_call[0] = time.time()
 
 
-def _http(url, timeout=10, retries=4):
+def _http(url, timeout=10, retries=4, extra_headers=None):
     """Return (status_code, body_bytes_or_None).
 
     Retries transient/rate-limit failures with exponential backoff. A definitive
     HTTP code (e.g. 404) is returned immediately with no body.
     """
+    headers = dict(_HEADERS)
+    if extra_headers:
+        headers.update(extra_headers)
     for attempt in range(retries):
         _throttle()
         try:
-            req = urllib.request.Request(url, headers=_HEADERS)
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.getcode(), r.read()
         except urllib.error.HTTPError as e:
@@ -216,6 +219,38 @@ def _ensembl_entity(ensg, timeout=10):
         names.append(d["description"].split(" [")[0])
     return {"primary": d.get("display_name"), "names": names,
             "symbols": symbols, "obsolete": False}
+
+
+# ---------------------------------------------------------------------------
+# v0.8: does a gene product actually carry a given GO term? (EBI QuickGO)
+# True  -> the gene is annotated with the term (or a descendant of it)
+# False -> it is not among the gene's annotations
+# None  -> could not verify (never accuse on uncertainty)
+# ---------------------------------------------------------------------------
+_FUNC_CACHE = DiskCache("functions")
+
+
+def gene_has_go(accession, go_id, timeout=12):
+    """Is `accession` annotated with `go_id` (respecting GO propagation)?"""
+    key = f"{accession}:{go_id}"
+    cached = _FUNC_CACHE.get(key)
+    if cached is not MISS:
+        return cached
+    url = ("https://www.ebi.ac.uk/QuickGO/services/annotation/search"
+           f"?geneProductId=UniProtKB:{urllib.parse.quote(accession)}"
+           f"&goId={urllib.parse.quote(go_id)}"
+           "&goUsage=descendants&goUsageRelationships=is_a,part_of,occurs_in&limit=1")
+    code, body = _http(url, timeout, extra_headers={"Accept": "application/json"})
+    res = None
+    if code == 200 and body:
+        try:
+            res = json.loads(body.decode()).get("numberOfHits", 0) > 0
+        except Exception:
+            res = None
+    # any non-200 (bad request, obsolete term, error) -> unknown, never accuse
+    if res is not None:
+        _FUNC_CACHE.set(key, res)
+    return res
 
 
 def fetch_entity(kind, curie, arg, timeout=10):

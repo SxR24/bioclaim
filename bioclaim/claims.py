@@ -227,13 +227,52 @@ def extract_labeled_ids(text):
         yield prefix, curie, claimed, start, end
 
 
-def check_claims(text, online=True, entity_hint=None):
+def _uniprot_accession(token):
+    return bool(token) and bool(ID_PATTERNS["UNIPROT"][0].fullmatch(token))
+
+
+def _apply_function_checks(out, entity_hint):
+    """v0.8 (opt-in): does the target gene actually carry each GO term?
+
+    Conservative by design: only runs when the target gene product is
+    unambiguous (an accession hint, or exactly one UniProt accession in the
+    text). Only downgrades a GO term that otherwise looks fine, and only when
+    QuickGO definitively says the gene is NOT annotated with it (or a
+    descendant). Any uncertainty is left untouched - never a false accusation.
+    """
+    # determine the single target gene product
+    accs = {v.curie for v in out
+            if v.prefix == "UNIPROT"
+            and v.status not in ("NOT_FOUND", "INVALID_FORMAT", "UNVERIFIED")}
+    if entity_hint and _uniprot_accession(entity_hint):
+        target = entity_hint
+    elif len(accs) == 1:
+        target = next(iter(accs))
+    else:
+        return                       # ambiguous or none -> do not guess
+
+    for v in out:
+        if v.prefix != "GO":
+            continue
+        if v.status not in ("SUPPORTED_LABEL_OK", "SUPPORTED_NO_LABEL"):
+            continue                 # only judge terms that are otherwise clean
+        annotated = sources.gene_has_go(target, v.curie)
+        if annotated is False:       # definitively not annotated
+            v.status = "SUPPORTED_FUNCTION_UNSUPPORTED"
+            v.canonical_label = target
+
+
+def check_claims(text, online=True, entity_hint=None, check_functions=False):
     """Verify existence, label consistency, and (with a hint) entity match.
 
     entity_hint: the gene/protein the text is *about* (e.g. from the question).
     UniProt/Ensembl IDs are checked against it - reliable, format-independent.
     Without a hint, correspondence is NOT accused (proximity guessing is
     unreliable), so the never-falsely-accuse guarantee holds.
+
+    check_functions (opt-in, default off): additionally verify that the target
+    gene actually carries each GO term, via QuickGO annotations. Off by default
+    so existing behaviour is unchanged.
     """
     from .validator import scan
     base = {(v.curie, v.start): v for v in scan(text, online=online)}
@@ -275,15 +314,20 @@ def check_claims(text, online=True, entity_hint=None):
             status = "SUPPORTED_NO_LABEL"
         out.append(ClaimVerdict(curie, prefix, kind_label, claimed,
                                 canonical, status, start, end))
+
+    if check_functions and online:
+        _apply_function_checks(out, entity_hint)
     return out
 
 
 FLAGGED_STATUSES = ("NOT_FOUND", "INVALID_FORMAT", "SUPPORTED_LABEL_MISMATCH",
-                    "SUPPORTED_OBSOLETE", "SUPPORTED_ENTITY_MISMATCH")
+                    "SUPPORTED_OBSOLETE", "SUPPORTED_ENTITY_MISMATCH",
+                    "SUPPORTED_FUNCTION_UNSUPPORTED")
 
 
-def report_claims(text, online=True, entity_hint=None):
-    verdicts = check_claims(text, online=online, entity_hint=entity_hint)
+def report_claims(text, online=True, entity_hint=None, check_functions=False):
+    verdicts = check_claims(text, online=online, entity_hint=entity_hint,
+                            check_functions=check_functions)
     flagged = [v for v in verdicts if v.status in FLAGGED_STATUSES]
     return {
         "n_ids": len(verdicts),

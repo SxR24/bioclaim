@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0 - gene-function association verification
+- **New (opt-in) check:** does the target gene actually carry each GO term? A real,
+  correctly-named GO term assigned to a gene that isn't annotated with it (e.g.
+  "TP53 ... GO:0015979 photosynthesis") now flags `SUPPORTED_FUNCTION_UNSUPPORTED`.
+  Existence + label checks both pass this; only annotation verification catches it.
+- Uses EBI QuickGO with GO propagation (descendants), so valid parent/child claims
+  are never falsely flagged. Cached to disk like every other lookup.
+- Stability-first: **off by default** (zero change to existing behaviour); only runs
+  when the target gene is unambiguous; reported honestly as "not among the gene's
+  GO annotations" (not "false"); any uncertainty leaves the term untouched.
+- Enable via `check(text, check_functions=True)`, `Firewall(check_functions=True)`,
+  `bioclaim --functions`, or `real_model_eval.py --functions`.
+
 ## 0.7.6
 - Ignore GO aspect/section headers ("Cellular Component", "Biological Process",
   "Molecular Function", etc.) as claimed labels. Models group GO terms under these

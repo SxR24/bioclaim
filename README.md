@@ -36,7 +36,7 @@ python scripts/benchmark.py data/benchmark_large.jsonl
 
 ## How it works
 
-Four layers, all designed to **never falsely accuse** (if a claim can't be verified it is
+Five layers, all designed to **never falsely accuse** (if a claim can't be verified it is
 marked `UNVERIFIED`, never flagged):
 
 1. **FORMAT** — offline, deterministic. Rejects malformed identifiers.
@@ -48,7 +48,12 @@ marked `UNVERIFIED`, never flagged):
    `SUPPORTED_LABEL_MISMATCH`. Synonym-aware, so paraphrases aren't falsely flagged.
 4. **ENTITY (v0.6)** — correspondence. A *real* UniProt/Ensembl ID attached to the
    *wrong* gene ("the UniProt for TP53 is P38398", actually BRCA1) is flagged
-   `SUPPORTED_ENTITY_MISMATCH` — the hardest class, invisible to existence checks.
+   `SUPPORTED_ENTITY_MISMATCH` — invisible to existence checks.
+5. **FUNCTION (v0.8, opt-in)** — association. A *real, correctly-named* GO term
+   assigned to a gene that isn't annotated with it ("TP53 does photosynthesis,
+   GO:0015979") is flagged `SUPPORTED_FUNCTION_UNSUPPORTED`, via QuickGO annotations
+   (GO-hierarchy aware). Existence *and* label checks pass this — only annotation
+   verification catches it. Off by default; enable with `check_functions=True`.
 
 Supported identifier types: GO, HP, MONDO, DOID, CHEBI, Ensembl gene (ENSG), UniProtKB.
 
@@ -84,6 +89,9 @@ bioclaim < answer.txt
 # tell it the gene the text is about, to also catch wrong-gene IDs
 bioclaim --entity BRCA1 "the accession is P04637"    # P04637 is TP53 -> flagged
 
+# also verify each GO term is actually annotated to the gene (opt-in)
+bioclaim --functions "TP53 (P04637) does photosynthesis (GO:0015979)"
+
 # offline: format check only, no network
 bioclaim --offline "GO:0006915"
 
@@ -108,6 +116,7 @@ for p in result.problems:
     print(p)         # GO:9999999: fabricated (does not exist)
 
 check(answer, entity_hint="BRCA1")   # pass the intended gene -> wrong-gene check
+check(answer, check_functions=True)  # also verify the gene carries each GO term
 check(answer, online=False)          # offline, format check only
 ```
 
@@ -133,6 +142,7 @@ answer = guarded(prompt)             # raises BioclaimFlag on a flagged identifi
 | **wrong description** | real id, wrong label — e.g. `GO:0005634` ("nucleus") called "nucleoplasm" |
 | **wrong gene/entity** | real accession, but for a different gene (needs `--entity` / `entity_hint`) |
 | **obsolete / deprecated** | real id, but retired from the database |
+| **not among the gene's GO annotations** | real, correctly-named GO term, but the gene isn't annotated with it (opt-in, `check_functions=True`) |
 | **unverifiable** | could not reach the database — never counted as a problem |
 
 Supported identifier types: GO, HP, MONDO, DOID, ChEBI, Ensembl gene (ENSG), and
@@ -179,8 +189,9 @@ tests/        offline unit tests
 - **v0.5** Claim verification — label consistency (real id, wrong description) *(done)*
 - **v0.6** Entity-correspondence — real id, wrong gene *(done)*
 - **v0.7** Deployable release — persistent cache, one-call API, `Firewall`, CLI, PyPI *(done)*
-- **v0.8** Context-free wrong-gene detection (no `entity_hint` needed) — *next*
-- **later** Calibrated confidence · relationship claims (gene–disease, pathway) · preprint
+- **v0.8** Gene–function association — does the gene actually carry the GO term? *(done)*
+- **v0.9** Context-free detection (wrong-gene / association without an explicit hint) — *next*
+- **later** Calibrated confidence · gene–disease & pathway claims · preprint
 
 ## Why this design wins
 
