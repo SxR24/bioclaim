@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,12 +8,12 @@ version = "0.8.0"
 description = "A grounding firewall for biomedical LLMs: verifies biological identifiers and claims against authoritative databases, and flags fabrications."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Sohil Ananth", email = "sohil.r@icloud.com" }]
 keywords = ["bioinformatics", "llm", "hallucination", "grounding", "genomics", "ontology"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
