@@ -9,11 +9,12 @@ Large language models constantly emit identifiers that *look* real but don't exi
 research and clinical settings that is a documented safety risk. `bioclaim` is a
 deterministic, low-latency layer that catches it.
 
-> **Real-model finding:** across three models, **48–68% of specialist biology
-> answers contained a wrong biomedical identifier** (Llama-3.1-8B 68%, gpt-oss-120B
-> 60%, Llama-3.3-70B 48%). The dominant error is a real, valid accession pointing at
-> the **wrong gene** — invisible to existence checks, independently verified.
-> Full study: [RESULTS.md](RESULTS.md).
+> **Real-model finding:** across **six** models, **25–68% of specialist biology answers
+> contained a wrong biomedical identifier** — including OpenAI's GPT-4o (25%) and GPT-5
+> (40%). Reliability is not monotonic in capability: the newest reasoning model (GPT-5)
+> was *worse* than GPT-4o, and its errors were all real IDs used wrongly (e.g. returning
+> the MONDO ID for *lupus* when asked for alkaptonuria). Independently audited, zero
+> false positives. Full study: [RESULTS.md](RESULTS.md).
 
 ## Benchmark result
 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm;
+    @bottom-center { content: "bioclaim — project dossier"; font-size: 8pt; color:#8a94a6; }
+    @bottom-right  { content: "page " counter(page); font-size: 8pt; color:#8a94a6; } }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color:#1f2733; font-size:10.3pt; line-height:1.5; margin:0; }
+  h1 { font-size:23pt; color:#0b3d5c; margin:0 0 2px 0; line-height:1.15; letter-spacing:-.3px;}
+  h2 { font-size:14pt; color:#0b6e8f; border-bottom:2px solid #d8e6ee; padding-bottom:4px; margin:22px 0 9px; }
+  h3 { font-size:11pt; color:#0b3d5c; margin:14px 0 4px; }
+  p { margin:0 0 8px; }
+  a { color:#0b6e8f; text-decoration:none; }
+  .sub { color:#54607a; font-size:11pt; margin:2px 0 0; }
+  .tagline { font-size:11.5pt; color:#0b6e8f; font-weight:600; margin:10px 0 0; }
+  .meta { font-size:9pt; color:#6b7688; margin:6px 0 0; }
+  .rule { height:3px; background:linear-gradient(90deg,#0b6e8f,#3aa7c9); border:0; margin:14px 0 0; border-radius:2px;}
+  .lead { font-size:10.8pt; background:#f4f9fb; border-left:4px solid #0b6e8f; padding:11px 14px; border-radius:0 6px 6px 0; margin:14px 0; }
+  .stats { display:flex; gap:10px; margin:14px 0; }
+  .stat { flex:1; background:#0b3d5c; color:#fff; border-radius:8px; padding:12px 10px; text-align:center; }
+  .stat.alt { background:#0b6e8f; }
+  .stat.green{ background:#12805c;}
+  .stat .n { font-size:20pt; font-weight:700; display:block; line-height:1; }
+  .stat .l { font-size:7.8pt; opacity:.9; display:block; margin-top:5px; text-transform:uppercase; letter-spacing:.4px;}
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:9.4pt; }
+  th { background:#0b3d5c; color:#fff; text-align:left; padding:6px 8px; font-weight:600; }
+  td { padding:5px 8px; border-bottom:1px solid #e3e9f0; }
+  tr:nth-child(even) td { background:#f7fafc; }
+  .bad { color:#b3261e; font-weight:600; }
+  .good { color:#12805c; font-weight:600; }
+  .box { background:#fbfdff; border:1px solid #d8e6ee; border-radius:8px; padding:11px 14px; margin:12px 0; }
+  .box.warn { background:#fff8f3; border-color:#f0d5c0; }
+  .box h3 { margin-top:0; }
+  ul { margin:4px 0 8px; padding-left:18px; }
+  li { margin:3px 0; }
+  code { background:#eef3f7; padding:1px 5px; border-radius:4px; font-family:"SF Mono",Consolas,monospace; font-size:8.8pt; color:#0b3d5c;}
+  .cols { display:flex; gap:16px; }
+  .cols > div { flex:1; }
+  .pagebreak { page-break-before: always; }
+  .foot { margin-top:16px; font-size:8.5pt; color:#6b7688; border-top:1px solid #e3e9f0; padding-top:8px;}
+  .kicker { color:#0b6e8f; font-weight:700; font-size:8.5pt; letter-spacing:1.2px; text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<div class="kicker">Open-source research tool · Project dossier</div>
+<h1>bioclaim</h1>
+<p class="sub">Catching fabricated and incorrect biomedical identifiers in AI-generated text</p>
+<p class="tagline">Even GPT-4o gets biomedical identifiers wrong in 1 of every 4 specialist answers — smaller models up to 68%. bioclaim catches it.</p>
+<p class="meta"><b>Author:</b> Sohil Ananth Ramesh Kumar, University of Leicester &nbsp;·&nbsp;
+<b>Code:</b> github.com/SxR24/bioclaim &nbsp;·&nbsp; <b>Install:</b> <code>pip install bioclaim</code> &nbsp;·&nbsp; MIT-licensed</p>
+<hr class="rule">
+
+<div class="lead">
+<b>In one line.</b> Large language models are now used across the life sciences, but they routinely cite
+database identifiers (UniProt, Ensembl, GO, HPO…) that look authoritative and are wrong. bioclaim is a
+deterministic, dependency-free tool that verifies every identifier in a piece of AI output against the
+authoritative source databases and flags the fabricated, mislabeled, misassigned, deprecated, and
+biologically-unsupported ones — with a hard guarantee that it never falsely accuses.
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="n">25–68%</span><span class="l">of specialist answers had a wrong identifier (6 models, incl. GPT-4o &amp; GPT-5)</span></div>
+  <div class="stat alt"><span class="n">100%</span><span class="l">precision on a 500-item benchmark</span></div>
+  <div class="stat green"><span class="n">66/66</span><span class="l">false gene–function claims caught (live)</span></div>
+</div>
+
+<h2>1 · The problem</h2>
+<p>An LLM asked a specialist biology question returns a fluent, confident answer containing identifiers such as
+<code>UniProtKB: P04637</code>, <code>Ensembl: ENSG00000141510</code>, and <code>GO:0006915</code>. Any of these
+may be:</p>
+<ul>
+  <li><b>Fabricated</b> — a well-formed identifier that does not exist in any database.</li>
+  <li><b>Mislabeled</b> — a real identifier described incorrectly.</li>
+  <li><b>Misassigned</b> — a real, valid accession that belongs to a <i>different</i> gene.</li>
+  <li><b>Deprecated / deleted</b> — a real identifier that has since been retired.</li>
+  <li><b>Biologically unsupported</b> — a real GO term assigned to a gene that isn't annotated with it.</li>
+</ul>
+<p>These errors are uniquely dangerous because they are <b>high-stakes</b> (each points, or fails to point, at a
+specific database record) yet <b>low-salience</b> (a short alphanumeric string a reader will not check). In a
+research or clinical pipeline, a single wrong accession can silently corrupt an analysis. Existing work either
+<i>measures</i> this (knowledge benchmarks) or builds <i>task-specific</i> self-verifying agents — but there is
+no general, deployable layer that can screen <i>any</i> LLM output for exactly this class of checkable error.</p>
+
+<h2>2 · How it works</h2>
+<p>bioclaim extracts every recognised identifier from input text and applies up to <b>five verification layers</b>,
+querying live authoritative databases (EBI OLS for ontologies, UniProt and Ensembl REST for genes/proteins,
+QuickGO for annotations). It uses <b>no model of its own</b> — it is a deterministic lookup, so it cannot itself
+hallucinate.</p>
+<table>
+  <tr><th>Layer</th><th>Catches</th><th>Example</th></tr>
+  <tr><td>1 · Format</td><td>malformed identifiers</td><td>offline, instant</td></tr>
+  <tr><td>2 · Existence</td><td>fabricated &amp; deleted IDs</td><td><code>GO:9999999</code>; deleted UniProt accessions</td></tr>
+  <tr><td>3 · Label</td><td>real ID, wrong description</td><td><code>GO:0005634</code> ("nucleus") called "nucleoplasm"</td></tr>
+  <tr><td>4 · Entity</td><td>real ID, wrong gene</td><td><code>P04637</code> given for BRCA1 (it is TP53)</td></tr>
+  <tr><td>5 · Function</td><td>real GO term the gene lacks</td><td>"TP53 does photosynthesis (GO:0015979)"</td></tr>
+</table>
+<p><b>The core design guarantee: it never falsely accuses.</b> Anything that cannot be verified (network failure,
+rate limit, ambiguous context) is marked <i>unverified</i> and is never flagged. Every lookup is cached to disk,
+so after a warm-up the tool is fast, offline-capable, and immune to rate limits. It ships as a Python library, a
+one-call API, a guardrail wrapper, and a command-line tool.</p>
+
+<div class="pagebreak"></div>
+<h2>3 · The evidence — how well it solves the problem</h2>
+
+<h3>3.1 · Six models — all wrong in 25–68% of specialist answers</h3>
+<p>Six models, including OpenAI's GPT-4o and GPT-5, were tested on 40 hard, long-tail questions (obscure genes,
+rare diseases, quota prompts). Every identifier was verified live, and <b>every flag was independently confirmed</b>
+against the source databases — zero false positives.</p>
+<table>
+  <tr><th>Model</th><th>Answers wrong</th><th>Fabricated</th><th>Mislabeled</th><th>Wrong-gene</th><th>Obsolete</th></tr>
+  <tr><td>Llama-3.1-8B</td><td class="bad">68% (27/40)</td><td>7</td><td>28</td><td>30</td><td>7</td></tr>
+  <tr><td>gpt-oss-120B</td><td class="bad">60% (24/40)</td><td>1</td><td>0</td><td>33</td><td>0</td></tr>
+  <tr><td>GPT-4o-mini</td><td class="bad">52% (21/40)</td><td>6</td><td>0</td><td>16</td><td>0</td></tr>
+  <tr><td>Llama-3.3-70B</td><td class="bad">48% (19/40)</td><td>7</td><td>5</td><td>16</td><td>1</td></tr>
+  <tr><td><b>GPT-5</b></td><td class="bad">40% (16/40)</td><td>0</td><td>5</td><td>10</td><td>1</td></tr>
+  <tr><td><b>GPT-4o</b></td><td class="bad">25% (10/40)</td><td>2</td><td>0</td><td>8</td><td>0</td></tr>
+</table>
+<p><b>Even the best model (GPT-4o) is wrong 1 in 4 times — and newer is not reliably better:</b> GPT-5, OpenAI's
+newest reasoning model, was <i>worse</i> than GPT-4o (40% vs 25%). Reasoning ability does not translate into factual
+recall of obscure identifiers. GPT-5 fabricated <i>zero</i> non-existent IDs — every error was a <b>real identifier
+used wrongly</b>, which is harder to detect than obvious fabrication. Asked for the disease ID for
+<b>alkaptonuria</b>, GPT-5 returned the ID for <i>systemic lupus erythematosus</i>; asked for <b>Menkes disease</b> it
+returned <i>Riley-Day syndrome</i> and fabricated supporting cross-references to appear authoritative.
+(A partial run of the ~1.6T DeepSeek-V4-Pro was near-zero, showing the very largest models can do better — but the
+relationship with capability is not monotonic.)</p>
+
+<h3>3.2 · Benchmark: high recall at a hard 100% precision</h3>
+<div class="cols">
+<div>
+<p>On 500 controlled answers with 394 injected fabrications, bioclaim was scored against ground truth. Every
+uncaught fabrication was a network-throttled lookup that safely returned <i>unverified</i> — <b>not a single
+fabrication was checked and missed</b>, and there were zero false accusations.</p>
+</div>
+<div>
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Precision</td><td class="good">100.0%</td></tr>
+  <tr><td>Recall</td><td>95.7% (377/394)</td></tr>
+  <tr><td>F1</td><td>0.978</td></tr>
+  <tr><td>False accusations</td><td class="good">0</td></tr>
+</table>
+</div>
+</div>
+
+<h3>3.3 · Gene–function verification, validated live</h3>
+<p>On 104 curated gene–function cases run against live QuickGO, bioclaim <b>rejected 66/66 (100%)</b> implausible
+associations (no human protein is annotated with photosynthesis, pollen development, or nitrogen fixation) and
+<b>accepted 37/38 (97%)</b> genuine ones. The single exception (MTOR / "ATP binding") reflects GO annotation
+<i>incompleteness</i> — the tool honestly reported "not among the gene's annotations", never "false".</p>
+
+<div class="box"><h3>The most convincing demonstration</h3>
+<p>The identifier <code>GO:0005634</code> was <b>flagged</b> in one expert passage (where it was described as
+"nucleoplasm") and <b>accepted</b> in another (where it was correctly described as "nucleus"). The same identifier,
+opposite verdicts — because the tool verifies the <i>claim against the database</i>, not the string. It also caught
+several genuinely <b>deprecated</b> GO terms (e.g. "cell cycle arrest", "extracellular space") that read as valid to
+a domain expert.</p></div>
+
+<div class="pagebreak"></div>
+<h2>4 · The engineering rigor — problems faced &amp; solved</h2>
+<p>bioclaim was hardened through adversarial testing on expert-authored text; each surfaced gap was diagnosed and
+fixed, and every flag re-verified against the live databases. This history is itself evidence of scientific care:</p>
+<table>
+  <tr><th>Problem surfaced</th><th>Resolution</th></tr>
+  <tr><td>Wrong-gene check false-positived on table-formatted answers</td><td>Anchored to the known gene; never guesses from proximity</td></tr>
+  <tr><td>Half of all UniProt accession formats were not recognised</td><td>Adopted the full official accession syntax</td></tr>
+  <tr><td>Deleted UniProt accessions passed as "exists" (HTTP 200)</td><td>Detect <code>Inactive</code> entries as non-resolving</td></tr>
+  <tr><td>An active term was mislabeled obsolete by a stale duplicate</td><td>Prefer the active, defining ontology term</td></tr>
+  <tr><td>GO section headers ("Cellular Component") mistaken for descriptions</td><td>Filter aspect headers from claimed labels</td></tr>
+  <tr><td>Annotation incompleteness could cause false accusations</td><td>Report "not among annotations" as fact, never "false"</td></tr>
+</table>
+<p>Independent verification was performed throughout — including a case where the tool correctly flagged a term
+the author (and a knowledgeable reviewer) assumed was valid, and the database sided with the tool.</p>
+
+<h2>5 · Why it is better than the alternatives</h2>
+<table>
+  <tr><th>Property</th><th>bioclaim</th><th>Knowledge benchmarks</th><th>Task-specific agents</th></tr>
+  <tr><td>Deployable (<code>pip install</code>, 3-line integration)</td><td class="good">yes</td><td>no</td><td>research code</td></tr>
+  <tr><td>General — any identifier, any text</td><td class="good">yes</td><td>fixed test set</td><td>single task</td></tr>
+  <tr><td>Deterministic (cannot itself hallucinate)</td><td class="good">yes</td><td>n/a</td><td>often LLM-based</td></tr>
+  <tr><td>Verifies the <i>claim</i> (wrong-gene, gene–function)</td><td class="good">yes</td><td>no</td><td>partial</td></tr>
+  <tr><td>Precision-first, never falsely accuses</td><td class="good">yes</td><td>n/a</td><td>varies</td></tr>
+</table>
+
+<h2>6 · How it scales</h2>
+<div class="cols">
+<div>
+<ul>
+  <li><b>Local database snapshots</b> — bundle GO/HPO for microsecond, fully-offline checks at corpus scale.</li>
+  <li><b>Persistent caching</b> (already implemented) — each identifier fetched at most once, ever.</li>
+  <li><b>Async / batch</b> lookups for screening large document sets.</li>
+</ul>
+</div>
+<div>
+<ul>
+  <li><b>Broader coverage</b> — RefSeq, dbSNP rsIDs, PubMed citation IDs (fabricated references), drug IDs, taxonomy.</li>
+  <li><b>Integrations</b> — a guardrail for LLM frameworks, a GitHub Action, a hosted API, CI checks.</li>
+  <li><b>A public benchmark</b> others evaluate against — defining the category.</li>
+</ul>
+</div>
+</div>
+
+<h2>7 · How it can be made better (roadmap)</h2>
+<ul>
+  <li><b>Context-free detection</b> — catch wrong-gene and false-function claims in free text without an explicit gene hint.</li>
+  <li><b>Deeper claim verification</b> — gene–disease associations (ClinVar / DisGeNET), pathway membership (Reactome), variant nomenclature (HGVS/ClinVar).</li>
+  <li><b>Calibrated confidence</b> — a score per verdict rather than a binary flag.</li>
+  <li><b>A larger, multi-run, multi-model benchmark</b> — turning the finding into a citable, reference-grade dataset.</li>
+  <li><b>Peer-reviewed publication</b> — a manuscript draft already exists.</li>
+</ul>
+
+<h2>8 · Why this matters, and the ask</h2>
+<p>As LLMs are embedded deeper into biomedical workflows, a lightweight, deterministic safeguard for their most
+checkable class of error is both practical and, increasingly, necessary. bioclaim is already published, installed,
+tested, and validated live. The natural next steps — a rigorous multi-run benchmark, deeper claim verification,
+and a preprint — would benefit enormously from expert supervision.</p>
+<div class="box warn"><h3>What I'm hoping for</h3>
+<p>Your feedback on the approach and its scientific value; and, if it interests you, the opportunity to develop it
+further under your guidance — as a research project, a co-authored preprint, or a dissertation. A draft manuscript
+and a ready-to-run demo (<code>bioclaim &lt; sample_paragraphs.txt</code>, with an answer key) are available on request.</p></div>
+
+<div class="foot">
+bioclaim · open-source (MIT) · github.com/SxR24/bioclaim · <code>pip install bioclaim</code> ·
+All figures are reproducible from the repository. Prepared by Sohil Ananth Ramesh Kumar, University of Leicester.
+</div>
+
+</body>
+</html>
