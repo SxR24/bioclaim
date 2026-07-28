@@ -100,12 +100,22 @@ OPENAI_COMPATIBLE = {
 def ask_openai(model, question, base_url=None, api_key=None):
     from openai import OpenAI
     client = OpenAI(base_url=base_url, api_key=api_key)
-    resp = client.chat.completions.create(
+    kwargs = dict(
         model=model,
         messages=[{"role": "system", "content": SYSTEM_PROMPT},
                   {"role": "user", "content": question}],
         temperature=0.2,
     )
+    try:
+        resp = client.chat.completions.create(**kwargs)
+    except Exception as e:
+        # some models (e.g. GPT-5 reasoning models) only allow the default
+        # temperature - retry without it rather than failing the whole run
+        if "temperature" in str(e).lower():
+            kwargs.pop("temperature", None)
+            resp = client.chat.completions.create(**kwargs)
+        else:
+            raise
     return resp.choices[0].message.content
 
 
